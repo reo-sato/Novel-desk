@@ -1,0 +1,8 @@
+{
+  "version": "1.0.0",
+  "repo": "reo-sato/Novel-desk",
+  "branch": "main",
+  "batVersion": "2",
+  "files": ["server.js", "index.html", "README.txt", "version.json"],
+  "notes": "文体のお手本・避けたい表現のチェック・推敲機能を追加。アプリ内アップデートに対応。"
+}

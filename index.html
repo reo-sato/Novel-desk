@@ -1,0 +1,1739 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Novel Desk</title>
+<style>
+:root {
+  --bg: #16151a;
+  --panel: #1e1d23;
+  --panel-2: #26252c;
+  --line: #34323b;
+  --text: #e8e4dc;
+  --muted: #9a958c;
+  --faint: #6d6962;
+  --accent: #c9a26b;
+  --accent-ink: #1b1710;
+  --danger: #d4766b;
+  --ok: #8fb98a;
+  --paper: #1b1a1f;
+  --ui: "Yu Gothic UI", "Hiragino Sans", "Meiryo", system-ui, sans-serif;
+  --serif: "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: var(--ui); font-size: 14px; line-height: 1.6;
+  display: flex; flex-direction: column; height: 100vh; height: 100dvh;
+}
+button, input, textarea, select { font: inherit; color: inherit; }
+button {
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;
+  padding: 7px 14px; cursor: pointer; white-space: nowrap;
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .4; cursor: default; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+button.primary:hover:not(:disabled) { filter: brightness(1.08); }
+button.danger { border-color: var(--danger); color: var(--danger); }
+button.small { padding: 4px 10px; font-size: 12px; }
+input, select, textarea {
+  background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; width: 100%;
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+textarea { resize: vertical; line-height: 1.7; }
+
+/* ヘッダー */
+header {
+  display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+  border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap;
+}
+.brand { font-family: var(--serif); font-size: 18px; letter-spacing: .08em; color: var(--accent); margin-right: 8px; }
+#workSelect { width: auto; min-width: 200px; max-width: 360px; }
+header .spacer { flex: 1; }
+details.menu { position: relative; }
+details.menu > summary {
+  list-style: none; cursor: pointer; background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 8px; padding: 7px 14px;
+}
+details.menu > summary::-webkit-details-marker { display: none; }
+details.menu[open] > summary { border-color: var(--accent); }
+details.menu .menu-body {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 10px; padding: 6px; display: flex; flex-direction: column; gap: 4px; min-width: 210px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.4);
+}
+details.menu .menu-body button { text-align: left; border-color: transparent; background: transparent; }
+details.menu .menu-body button:hover { background: var(--panel-2); }
+
+/* レイアウト */
+main { display: grid; grid-template-columns: 380px 1fr; flex: 1; min-height: 0; }
+.mobile-tabs { display: none; }
+aside { border-right: 1px solid var(--line); overflow-y: auto; padding: 14px 16px 40px; background: var(--panel); }
+.field { margin-bottom: 16px; }
+.field label { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-weight: 700; margin-bottom: 4px; }
+.field label .hint { font-weight: 400; color: var(--faint); font-size: 12px; }
+.field .row { display: flex; gap: 6px; margin-top: 6px; }
+.field .row input { flex: 1; }
+.section-title { font-size: 12px; color: var(--muted); letter-spacing: .1em; margin: 6px 0 10px; }
+
+.editor { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.editor-head {
+  display: flex; align-items: center; gap: 12px; padding: 8px 20px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 13px;
+}
+.editor-head .count { color: var(--text); }
+.editor-head .spacer { flex: 1; }
+#saveState.err { color: var(--danger); }
+.paper-wrap { flex: 1; min-height: 0; overflow: hidden; display: flex; justify-content: center; padding: 0 16px; }
+#body {
+  height: 100%; max-width: 46em; border: none; border-radius: 0; background: transparent; resize: none;
+  font-family: var(--serif); font-size: 17px; line-height: 2; padding: 28px 8px 40px; letter-spacing: .02em;
+}
+#body:focus { border: none; }
+#body.streaming { caret-color: transparent; }
+
+.composer { border-top: 1px solid var(--line); background: var(--panel); padding: 12px 20px 14px; }
+.composer-row { display: flex; gap: 10px; align-items: stretch; }
+#instruction { flex: 1; min-height: 64px; height: 64px; }
+.target-box { display: flex; flex-direction: column; gap: 4px; width: 120px; font-size: 12px; color: var(--muted); }
+.actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+.actions .spacer { flex: 1; }
+#checkPanel {
+  max-height: 30vh; overflow-y: auto; border-bottom: 1px solid var(--line); background: var(--panel);
+  padding: 8px 20px; font-size: 13px;
+}
+#checkPanel .chk-item {
+  display: block; width: 100%; text-align: left; white-space: normal; border: none; border-radius: 6px;
+  background: transparent; padding: 6px 8px; line-height: 1.6; color: var(--muted);
+}
+#checkPanel .chk-item:hover { background: var(--panel-2); }
+#checkPanel .chk-head { color: var(--muted); padding: 2px 8px 6px; display: flex; gap: 8px; align-items: center; }
+#settingsBtn.upd { border-color: var(--accent); color: var(--accent); }
+#settingsBtn.upd::after { content: ' ●'; font-size: 10px; }
+#checkBtn.has { border-color: var(--accent); color: var(--accent); }
+mark { background: rgba(212, 118, 107, .28); color: var(--text); border-radius: 3px; padding: 0 1px; }
+#polishDlg { width: min(860px, calc(100vw - 24px)); }
+.pol-label { font-weight: 700; margin: 4px 0 6px; }
+.pol-text {
+  white-space: pre-wrap; font-family: var(--serif); font-size: 15px; line-height: 1.9; background: var(--paper);
+  border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; max-height: 46vh; overflow-y: auto;
+}
+.pol-before { margin-top: 12px; }
+.pol-before summary { cursor: pointer; color: var(--muted); margin-bottom: 6px; }
+.dlg-foot { display: flex; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.dlg-foot .spacer { flex: 1; }
+#status { margin-top: 8px; font-size: 13px; color: var(--muted); min-height: 1.6em; }
+#status.err { color: var(--danger); }
+#status.ok { color: var(--ok); }
+
+/* 設定ダイアログ */
+dialog {
+  background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 14px;
+  width: min(640px, calc(100vw - 32px)); padding: 0; max-height: calc(100vh - 40px);
+}
+dialog::backdrop { background: rgba(0,0,0,.55); }
+.dlg-head { display: flex; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.dlg-head h2 { margin: 0; font-size: 16px; flex: 1; }
+.dlg-body { padding: 16px 18px; overflow-y: auto; max-height: calc(100vh - 160px); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+.check { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 10px; font-weight: 400 !important; }
+.check input { width: auto; margin-top: 4px; }
+.note { font-size: 12px; color: var(--faint); margin-top: 3px; }
+.keyrow { display: flex; gap: 6px; }
+
+.lan-box { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-top: 16px; }
+.lan-box h3 { margin: 0 0 6px; font-size: 14px; }
+.lan-box p { margin: 4px 0; color: var(--muted); font-size: 13px; }
+.lan-box .url { font-family: ui-monospace, Consolas, monospace; color: var(--text); font-size: 15px; user-select: all; }
+
+/* スマホ */
+@media (max-width: 900px) {
+  header { padding: 8px 10px; gap: 6px; }
+  .brand { display: none; }
+  #workSelect { flex: 1; min-width: 0; max-width: none; }
+  header .spacer { display: none; }
+  #newWorkBtn .label, #settingsBtn .label, details.menu .label { display: none; }
+  details.menu > summary { padding: 7px 10px; }
+  .mobile-tabs { display: flex; border-bottom: 1px solid var(--line); background: var(--panel); }
+  .mobile-tabs button {
+    flex: 1; border: none; border-radius: 0; background: transparent; padding: 10px; color: var(--muted);
+    border-bottom: 2px solid transparent;
+  }
+  .mobile-tabs button.on { color: var(--accent); border-bottom-color: var(--accent); }
+  main { grid-template-columns: 1fr; }
+  body.tab-editor aside { display: none; }
+  body.tab-aside .editor { display: none; }
+  aside { border-right: none; }
+  .editor-head { padding: 6px 14px; }
+  .paper-wrap { padding: 0 6px; }
+  #body { font-size: 16px; line-height: 1.9; padding: 14px 6px 24px; }
+  .composer { padding: 10px 12px 12px; }
+  .composer-row { flex-direction: row; gap: 8px; }
+  #instruction { height: 56px; min-height: 56px; }
+  .target-box { width: 84px; }
+  .actions { gap: 6px; margin-top: 8px; }
+  .actions button { padding: 7px 10px; }
+  .actions .spacer { display: none; }
+  input, select, textarea { font-size: 16px; } /* iPhoneで勝手に拡大されないように */
+  .grid2 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<header>
+  <span class="brand">Novel Desk</span>
+  <select id="workSelect" title="作品を切り替え"></select>
+  <button id="newWorkBtn" title="新しい作品">＋<span class="label"> 新しい作品</span></button>
+  <span class="spacer"></span>
+  <details class="menu" id="fileMenu">
+    <summary title="書き出し・読み込み">☰<span class="label"> 書き出し・読み込み</span></summary>
+    <div class="menu-body">
+      <button id="exportTxtBtn">本文をテキスト(.txt)で保存</button>
+      <button id="exportWorkBtn">この作品をファイル(.json)で保存</button>
+      <button id="importWorkBtn">作品ファイル(.json)を読み込む</button>
+      <button id="duplicateWorkBtn">この作品を複製</button>
+      <button id="deleteWorkBtn" style="color:var(--danger)">この作品を削除</button>
+    </div>
+  </details>
+  <button id="settingsBtn" title="接続設定">⚙<span class="label"> 接続設定</span></button>
+  <input type="file" id="importFile" accept=".json,application/json" hidden>
+</header>
+<nav class="mobile-tabs">
+  <button data-tab="editor" class="on">本文</button>
+  <button data-tab="aside">作品設定</button>
+</nav>
+
+<main>
+  <aside>
+    <div class="section-title">作品設定（毎回モデルに渡されます）</div>
+    <div class="field">
+      <label for="f_title">タイトル</label>
+      <input id="f_title" data-field="title" placeholder="無題">
+    </div>
+    <div class="field">
+      <label for="f_goal">作品全体の目標字数 <span class="hint" id="goalProgress"></span></label>
+      <input id="f_goal" data-field="goal" type="number" min="0" step="1000" placeholder="例：9000（空欄なら目標なし）">
+      <div class="note">全体の字数はここで管理します。1回に書かせる量は本文タブの「分量の目安」で決めます。</div>
+    </div>
+    <div class="field">
+      <label for="f_style">文体・書き方のルール <span class="hint">毎回守らせたいこと</span></label>
+      <textarea id="f_style" data-field="style" rows="5" placeholder="例：ライトノベル調。主人公カシアンの三人称一元視点。一文は短め、会話多め。心理描写は丁寧に。（字数の指定はここではなく「目標字数」と「分量の目安」へ）"></textarea>
+    </div>
+    <div class="field">
+      <label for="f_sample">文体のお手本 <span class="hint" id="sampleCount">いちばん効きます</span></label>
+      <textarea id="f_sample" data-field="sample" rows="7" placeholder="目指す書き方の実例を1000〜2000字ほど貼ります。自分で書いた文章や、生成された文章を好みに直したものがおすすめ。モデルは書き方だけを真似し、内容や人物は使いません。"></textarea>
+    </div>
+    <div class="field">
+      <label for="f_world">世界観・舞台</label>
+      <textarea id="f_world" data-field="world" rows="4" placeholder="例：中世風の王国。二つの貴族家が国境の平原を巡って対立している。"></textarea>
+    </div>
+    <div class="field">
+      <label for="f_chars">登場人物 <span class="hint">ここに書いた設定は変えさせません</span></label>
+      <textarea id="f_chars" data-field="characters" rows="9" placeholder="例：&#10;・カシアン（22）…ヴァルモン家次期当主。皮肉屋だが根は誠実。一人称「俺」。&#10;・エレナ（20）…ローゼン家当主。プラチナブロンド。気位が高いが情に脆い。丁寧語で話す。"></textarea>
+    </div>
+    <div class="field">
+      <label for="f_outline">構成案</label>
+      <textarea id="f_outline" data-field="outline" rows="9" placeholder="全体の流れ・場面ごとの予定。自分で書いても、下のボタンで作らせてもOK。"></textarea>
+      <div class="row">
+        <input id="f_outlineReq" data-field="outlineRequest" placeholder="構成への要望（例：全6場面、後半で立場が逆転）">
+        <button id="outlineBtn" class="small">構成案を作る</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="f_summary">これまでのあらすじ <span class="hint">本文が長くなったら更新</span></label>
+      <textarea id="f_summary" data-field="summary" rows="7" placeholder="本文が長くなると前半はモデルに渡せないので、ここに要約を置いておきます。"></textarea>
+      <div class="row" style="justify-content:flex-end">
+        <button id="summaryBtn" class="small">本文から要約を作る</button>
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-top:28px">文体チェック・推敲（全作品共通）</div>
+    <div class="field">
+      <label for="s_avoid">避けたい表現 <span class="hint">1行に1つ</span></label>
+      <textarea id="s_avoid" data-setting="avoidList" rows="9"></textarea>
+      <div class="note">「〜」は「間に何が入ってもよい」の印です（例：まるで〜よう）。行の頭に # を付けるとメモ扱い。本文中で見つかると、本文の上の「文体チェック」に出ます。</div>
+    </div>
+    <div class="field">
+      <label for="s_rules">推敲のチェック項目 <button class="small" id="resetRules" type="button">初期値に戻す</button></label>
+      <textarea id="s_rules" data-setting="polishRules" rows="9"></textarea>
+      <div class="note">「推敲する」を押すと、この項目に当てはまる文だけを書き直させます。</div>
+    </div>
+    <label class="check"><input type="checkbox" id="s_autoPolish" data-setting="autoPolish"> 場面を書いたあと、自動で推敲する（「取り消し」で推敲前に戻せます）</label>
+  </aside>
+
+  <section class="editor">
+    <div class="editor-head">
+      <span class="count" id="countLabel">本文 0字</span>
+      <button class="small" id="checkBtn" title="避けたい表現の一覧">文体チェック</button>
+      <span class="spacer"></span>
+      <span id="saveState">保存済み</span>
+    </div>
+    <div id="checkPanel" hidden></div>
+    <div class="paper-wrap">
+      <textarea id="body" spellcheck="false" placeholder="ここに本文がたまっていきます。直接書き足したり直したりしてもOKです。"></textarea>
+    </div>
+    <div class="composer">
+      <div class="composer-row">
+        <textarea id="instruction" placeholder="次の場面で書くこと（例：舞踏会のあと、二人きりのバルコニーでの会話。エレナが初めて本音を漏らす）"></textarea>
+        <div class="target-box">
+          <span>分量の目安（字）</span>
+          <input id="target" type="number" min="300" max="8000" step="500" value="2000">
+        </div>
+      </div>
+      <div class="actions">
+        <button class="primary" id="sceneBtn" title="Ctrl+Enter">次の場面を書く</button>
+        <button id="continueBtn" title="途中で切れた文の続きから書き継ぎます">続きを書く</button>
+        <button id="rewriteBtn" title="直前に生成した部分を消して、同じ指示でもう一度書きます">書き直す</button>
+        <button id="undoBtn" title="直前の生成をなかったことにします">取り消し</button>
+        <button id="polishBtn" title="直前に書いた部分（本文を選択していればその部分）を、チェック項目に沿って書き直します">推敲する</button>
+        <span class="spacer"></span>
+        <button class="danger" id="stopBtn" hidden>■ 停止</button>
+      </div>
+      <div id="status"></div>
+    </div>
+  </section>
+</main>
+
+<dialog id="settingsDlg">
+  <div class="dlg-head"><h2>接続設定</h2><button class="small" id="closeSettings">閉じる</button></div>
+  <div class="dlg-body">
+    <div class="field">
+      <label for="s_apiKey">Featherless APIキー</label>
+      <div class="keyrow">
+        <input id="s_apiKey" data-setting="apiKey" type="password" autocomplete="off" placeholder="rc_で始まるキー">
+        <button class="small" id="toggleKey">表示</button>
+      </div>
+      <div class="note" id="keyNote">このPCの novel-desk/data フォルダにだけ保存され、画面には表示されません。</div>
+    </div>
+    <div class="field">
+      <label for="s_model">モデルID</label>
+      <input id="s_model" data-setting="model" list="modelList" placeholder="例：google/gemma-4-31B-it">
+      <datalist id="modelList">
+        <option value="huihui-ai/Huihui-gemma-4-31B-it-abliterated-v2">
+        <option value="google/gemma-4-31B-it">
+      </datalist>
+      <div class="note">Featherless のモデルページの名前をそのまま貼り付けます（大文字・小文字も同じに）。</div>
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <label for="s_temperature">temperature <span class="hint">創造性</span></label>
+        <input id="s_temperature" data-setting="temperature" type="number" step="0.05" min="0" max="2">
+        <div class="note">高いほど自由・低いほど堅実。0.8〜1.0目安</div>
+      </div>
+      <div class="field">
+        <label for="s_top_p">top_p</label>
+        <input id="s_top_p" data-setting="top_p" type="number" step="0.01" min="0.01" max="1">
+      </div>
+      <div class="field">
+        <label for="s_rep">repetition_penalty</label>
+        <input id="s_rep" data-setting="repetition_penalty" type="number" step="0.01" min="1" max="2">
+        <div class="note">同じ表現の繰り返し防止。1.0〜1.1目安</div>
+      </div>
+      <div class="field">
+        <label for="s_max">1回の最大出力（トークン）</label>
+        <input id="s_max" data-setting="max_tokens" type="number" step="256" min="256" max="16000">
+        <div class="note">日本語はおよそ1字＝1トークン前後</div>
+      </div>
+      <div class="field">
+        <label for="s_minp">min_p</label>
+        <input id="s_minp" data-setting="min_p" type="number" step="0.01" min="0" max="0.5">
+        <div class="note">低すぎる確率の言葉を切る。変な比喩を減らす。0.05目安、0で無効</div>
+      </div>
+      <div class="field">
+        <label for="s_ctx">渡す直前の本文（字）</label>
+        <input id="s_ctx" data-setting="contextChars" type="number" step="1000" min="1000" max="24000">
+        <div class="note">32Kプランなら6000〜10000程度</div>
+      </div>
+    </div>
+    <label class="check"><input type="checkbox" id="s_auto" data-setting="autoLength"> 分量の目安に合わせる（足りなければ自動で書き足し、超えたら段落の切れ目で止める）</label>
+    <label class="check"><input type="checkbox" id="s_think" data-setting="disableThinking"> 思考モードを使わない（推奨。速く、本文に専念させる）</label>
+    <div class="field" style="margin-top:14px">
+      <label for="s_system">基本ルール（システム指示）
+        <button class="small" id="resetSystem" type="button">初期値に戻す</button></label>
+      <textarea id="s_system" data-setting="systemPrompt" rows="11"></textarea>
+    </div>
+    <div class="lan-box" id="lanBox">
+      <h3>スマホから使う（同じWi-Fi）</h3>
+      <div id="lanInfo"><p>確認中…</p></div>
+      <div id="pwArea" hidden>
+        <div class="keyrow" style="margin-top:8px">
+          <input id="newPw" type="password" autocomplete="new-password" placeholder="スマホ用パスワード（6文字以上）">
+          <button class="small" id="setPwBtn" type="button">設定</button>
+        </div>
+        <p class="note" id="pwMsg"></p>
+      </div>
+    </div>
+    <div class="lan-box" id="updateBox">
+      <h3>アップデート</h3>
+      <div id="updInfo"><p>確認中…</p></div>
+      <div class="keyrow" style="margin-top:8px">
+        <button class="small" id="updCheckBtn" type="button">更新を確認</button>
+        <button class="small primary" id="updApplyBtn" type="button" hidden>アップデートする</button>
+      </div>
+      <p class="note" id="updMsg"></p>
+      <details style="margin-top:8px">
+        <summary class="note" style="cursor:pointer">非公開リポジトリから更新する場合（GitHubトークン）</summary>
+        <div class="keyrow" style="margin-top:8px">
+          <input id="s_ghToken" data-setting="githubToken" type="password" autocomplete="off" placeholder="github_pat_ で始まるトークン">
+        </div>
+        <p class="note">公開リポジトリなら不要です。PCのファイルにだけ保存されます。消すときは「-」を入れて閉じます。</p>
+      </details>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="polishDlg">
+  <div class="dlg-head"><h2>推敲</h2></div>
+  <div class="dlg-body">
+    <p id="polishInfo" class="note" style="margin-top:0"></p>
+    <div class="pol-label">推敲後 <span id="polishAfterCount"></span></div>
+    <div class="pol-text" id="polishAfter"></div>
+    <details class="pol-before">
+      <summary>推敲前を見る <span id="polishBeforeCount"></span></summary>
+      <div class="pol-text" id="polishBefore"></div>
+    </details>
+  </div>
+  <div class="dlg-foot">
+    <button class="danger" id="polishStop">■ 停止</button>
+    <span class="spacer"></span>
+    <button id="polishCancel">やめる</button>
+    <button id="polishRetry">もう一度</button>
+    <button class="primary" id="polishApply">採用する</button>
+  </div>
+</dialog>
+
+<script>
+'use strict';
+
+const DEFAULT_SYSTEM = [
+  'あなたは熟練した日本語の小説家です。ユーザーから渡される「作品設定」に従い、小説の本文だけを書きます。',
+  '',
+  '守ること:',
+  '- 出力は小説本文のみ。前置き・解説・見出しへのコメント・あとがき・「以下が本文です」などは一切書かない。',
+  '- 「登場人物」の設定（名前・年齢・容姿・性格・口調・一人称・関係性）は書かれた通りに描き、勝手に変えない。設定にない要素を足す場合も、設定と矛盾させない。',
+  '- 「文体・書き方のルール」を全編で守る。',
+  '- 地の文と会話文を織り交ぜ、情景・五感・心理を具体的に描写する。説明で済ませず、場面として見せる。',
+  '- 同じ言い回しや展開の繰り返しを避ける。',
+  '- 指示された場面の範囲だけを書き、物語を勝手に先へ進めたり、締めくくったりしない。',
+].join('\n');
+
+const DEFAULT_AVOID = [
+  '# 1行に1つ。「〜」は間に何が入ってもよい印。# で始まる行はメモ',
+  'まるで〜よう',
+  'かのよう',
+  'ような気がした',
+  'どこか',
+  'ふと',
+  '息を呑',
+  '胸の奥',
+  '胸が締め付け',
+  '言葉にならな',
+  '思わず',
+  'という事実',
+].join('\n');
+
+const DEFAULT_RULES = [
+  '- 感情を名前で説明している文（「悲しみが込み上げた」「胸が温かくなった」など）は、行動・台詞・体の反応で見せる書き方に直す',
+  '- 回りくどい言い回し、遠回しな言い換え、もったいぶった表現は、短く直接的に言い切る',
+  '- 平凡な直喩や不自然な直喩は、削るか具体的な描写に置き換える。比喩を残すのは1場面に1つまで',
+  '- 1文に修飾語が重なりすぎている文は、分けるか削る',
+  '- 同じ語尾・同じ言い回し・同じ文の型が続くところは変える',
+  '- 抽象的な名詞より、具体的な名詞と動詞を使う',
+].join('\n');
+
+const DEFAULT_SETTINGS = {
+  apiKey: '',
+  model: 'huihui-ai/Huihui-gemma-4-31B-it-abliterated-v2',
+  temperature: 0.9,
+  top_p: 0.95,
+  repetition_penalty: 1.05,
+  min_p: 0.05,
+  max_tokens: 4096,
+  contextChars: 6000,
+  autoLength: true,
+  disableThinking: true,
+  systemPrompt: DEFAULT_SYSTEM,
+  avoidList: DEFAULT_AVOID,
+  polishRules: DEFAULT_RULES,
+  autoPolish: false,
+  githubToken: '',
+};
+
+function newWork(title) {
+  return {
+    id: 'w' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    title: title || '',
+    style: '', sample: '', world: '', characters: '', outline: '', outlineRequest: '', summary: '', body: '',
+    instruction: '', target: 2000, goal: 0,
+    updatedAt: Date.now(),
+  };
+}
+
+let state = { settings: { ...DEFAULT_SETTINGS }, works: [], currentId: null };
+let undoStack = [];      // { workId, tag, field, value } … 生成で書き換えた項目だけを覚える
+let lastAction = null;   // { kind, instruction, target, tag }
+let generating = null;   // AbortController
+let saveTimer = null;
+
+const $ = (id) => document.getElementById(id);
+const els = {
+  workSelect: $('workSelect'), body: $('body'), instruction: $('instruction'), target: $('target'),
+  status: $('status'), count: $('countLabel'), saveState: $('saveState'),
+  sceneBtn: $('sceneBtn'), continueBtn: $('continueBtn'), rewriteBtn: $('rewriteBtn'),
+  undoBtn: $('undoBtn'), stopBtn: $('stopBtn'), outlineBtn: $('outlineBtn'), summaryBtn: $('summaryBtn'),
+  polishBtn: $('polishBtn'), checkBtn: $('checkBtn'), checkPanel: $('checkPanel'),
+};
+
+function cur() { return state.works.find((w) => w.id === state.currentId); }
+function countChars(t) { return (t || '').replace(/\s/g, '').length; }
+function fmt(n) { return n.toLocaleString('ja-JP'); }
+
+function setStatus(msg, kind) {
+  els.status.textContent = msg || '';
+  els.status.className = kind || '';
+}
+
+/* ---------- 保存と端末間の同期 ----------
+   変更した項目だけをサーバーに送り、サーバー側の最新に合流させる。
+   ・自分が触っていない項目は、別の端末で書き換えた内容に追従する
+   ・自分が書き換えた項目は、自分の内容が保存される
+   これで、古い画面の端末が新しい作品設定を上書きすることがなくなる。 */
+const WORK_FIELDS = ['title', 'style', 'sample', 'world', 'characters', 'outline', 'outlineRequest', 'summary',
+  'body', 'instruction', 'target', 'goal'];
+let synced = { rev: -1, works: {}, settings: {} }; // サーバーと一致していると分かっている値
+let deletedLocal = new Set();
+let syncing = false, syncAgain = false, leaving = false, syncFailed = false;
+
+function snapWork(w) { const o = {}; WORK_FIELDS.forEach((f) => { o[f] = w[f]; }); return o; }
+function collectChanges() {
+  const changes = [];
+  for (const w of state.works) {
+    const base = synced.works[w.id];
+    const fields = {};
+    for (const f of WORK_FIELDS) if (!base || w[f] !== base[f]) fields[f] = w[f];
+    if (Object.keys(fields).length) changes.push({ id: w.id, fields });
+  }
+  const settings = {};
+  for (const k of Object.keys(state.settings)) {
+    if (k === 'apiKeySet' || k === 'githubTokenSet') continue;
+    if (k === 'apiKey' || k === 'githubToken') { if (state.settings[k]) settings[k] = state.settings[k]; continue; }
+    if (state.settings[k] !== synced.settings[k]) settings[k] = state.settings[k];
+  }
+  return { changes, settings, deleted: [...deletedLocal] };
+}
+function isDirty() {
+  const c = collectChanges();
+  return c.changes.length > 0 || Object.keys(c.settings).length > 0 || c.deleted.length > 0;
+}
+function showSaveState() {
+  if (syncFailed) {
+    els.saveState.textContent = '保存できません（PCの黒い画面が閉じていないか確認）';
+    els.saveState.className = 'err';
+  } else {
+    els.saveState.textContent = syncing ? '保存中…' : (isDirty() ? '未保存' : '保存済み');
+    els.saveState.className = '';
+  }
+}
+function scheduleSave() {
+  showSaveState();
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(sync, 700);
+}
+async function saveNow() { return sync(); }
+// 生成の直前に、別の端末で書き換えた作品設定を取り込んでおく（古い設定で書かせないため）
+async function syncAndWait() {
+  for (let i = 0; i < 60 && syncing; i++) await new Promise((r) => setTimeout(r, 50));
+  await sync();
+}
+
+// サーバーとの通信。スマホでログインが切れていたらログイン画面へ
+async function api(url, opts) {
+  const r = await fetch(url, opts);
+  if (r.status === 401) {
+    const j = await r.clone().json().catch(() => null);
+    if (j && j.needLogin) { leaving = true; location.href = '/login'; throw new Error('ログインが必要です'); }
+  }
+  return r;
+}
+function hasKey() { return !!(state.settings.apiKey || state.settings.apiKeySet); }
+
+async function sync() {
+  clearTimeout(saveTimer);
+  if (syncing) { syncAgain = true; return; }
+  syncing = true;
+  showSaveState();
+  // 送る時点の画面の内容を覚えておく（送信中にさらに書き換えた分を守るため）
+  const sent = collectChanges();
+  const start = { works: {}, settings: { ...state.settings } };
+  state.works.forEach((w) => { start.works[w.id] = snapWork(w); });
+  try {
+    const r = await api('/api/sync', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...sent, knownRev: synced.rev }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error?.message || r.status);
+    sent.deleted.forEach((id) => deletedLocal.delete(id));
+    for (const k of ['apiKey', 'githubToken']) {
+      if (sent.settings[k] && state.settings[k] === sent.settings[k]) state.settings[k] = ''; // 秘密の値はPCのファイルにだけ置く
+    }
+    if (!j.same) mergeServer(j, start);
+    synced.rev = j.rev;
+    syncFailed = false;
+  } catch (e) {
+    syncFailed = true;
+  } finally {
+    syncing = false;
+    if (syncAgain) { syncAgain = false; sync(); } else showSaveState();
+  }
+}
+
+function mergeServer(data, start) {
+  const serverIds = new Set(data.works.map((w) => w.id));
+  const curId = state.currentId;
+  let structural = false;
+  const changedCurrent = new Set();
+
+  // 別の端末で削除された作品を外す（送信後に新しく作った作品は残す）
+  const kept = state.works.filter((w) => serverIds.has(w.id) || !start.works[w.id]);
+  if (kept.length !== state.works.length) structural = true;
+  state.works = kept;
+
+  for (const raw of data.works) {
+    const sw = { ...newWork(), ...raw }; // 古いデータにない項目は初期値で補う
+    if (deletedLocal.has(sw.id)) continue;
+    let w = state.works.find((x) => x.id === sw.id);
+    if (!w) {
+      state.works.push(sw);
+      structural = true;
+    } else {
+      const st = start.works[sw.id];
+      for (const f of WORK_FIELDS) {
+        const untouched = st && w[f] === st[f]; // 送信後にこの画面で書き換えていない
+        if (untouched && w[f] !== sw[f]) {
+          w[f] = sw[f];
+          if (w.id === curId) changedCurrent.add(f);
+          if (f === 'title' || f === 'body') structural = true;
+        }
+      }
+      w.updatedAt = sw.updatedAt || w.updatedAt;
+    }
+    synced.works[sw.id] = snapWork(sw);
+  }
+  for (const id of Object.keys(synced.works)) if (!serverIds.has(id)) delete synced.works[id];
+
+  // 接続設定
+  const ss = { ...DEFAULT_SETTINGS, ...data.settings };
+  let settingsChanged = false;
+  for (const k of Object.keys(ss)) {
+    if (k === 'apiKey' || k === 'githubToken') continue;
+    if (k === 'apiKeySet' || k === 'githubTokenSet') { state.settings[k] = !!ss[k]; continue; }
+    if (state.settings[k] === start.settings[k] && state.settings[k] !== ss[k]) {
+      state.settings[k] = ss[k]; settingsChanged = true;
+    }
+    synced.settings[k] = ss[k];
+  }
+
+  if (!state.works.length) state.works.push(newWork('はじめての作品'));
+  if (!cur()) { state.currentId = state.works[0].id; renderWork(); structural = true; setStatus('表示していた作品は別の端末で削除されました。'); }
+  else if (changedCurrent.size) {
+    applyFieldsToDom(changedCurrent);
+    if (changedCurrent.has('body')) {
+      undoStack = undoStack.filter((u) => u.workId !== curId); lastAction = null;
+    }
+    setStatus('別の端末での変更を取り込みました。', 'ok');
+  }
+  if (structural) renderWorkSelect();
+  if (settingsChanged && !dlg.open) renderSettings();
+  updateButtons();
+}
+
+// 変わった項目だけ画面に反映する（入力中のカーソル位置はできるだけ保つ）
+function applyFieldsToDom(fields) {
+  const w = cur();
+  const map = {};
+  document.querySelectorAll('[data-field]').forEach((el) => { map[el.dataset.field] = el; });
+  map.body = els.body; map.instruction = els.instruction; map.target = els.target;
+  fields.forEach((f) => {
+    const el = map[f];
+    if (!el) return;
+    const v = w[f] ?? (f === 'target' ? 2000 : '');
+    if (String(el.value) === String(v)) return;
+    const focused = document.activeElement === el;
+    const pos = focused && typeof el.selectionStart === 'number' ? el.selectionStart : null;
+    const top = el.scrollTop;
+    el.value = v;
+    if (pos !== null) { try { el.setSelectionRange(pos, pos); } catch (_) {} }
+    el.scrollTop = top;
+  });
+  updateCount(); updateGoal();
+  if (fields.has('body')) updateCheck();
+  if (fields.has('sample')) updateSampleCount();
+}
+
+async function load() {
+  try {
+    const r = await api('/api/load');
+    const data = await r.json();
+    if (data && Array.isArray(data.works)) {
+      state.works = data.works.map((w) => ({ ...newWork(), ...w }));
+      state.settings = { ...DEFAULT_SETTINGS, ...data.settings, apiKey: '', githubToken: '' };
+      synced.rev = data.rev || 0;
+      data.works.forEach((w) => { synced.works[w.id] = snapWork({ ...newWork(), ...w }); });
+      for (const k of Object.keys(state.settings)) if (k !== 'apiKey' && k !== 'githubToken') synced.settings[k] = state.settings[k];
+      let saved = null;
+      try { saved = localStorage.getItem('nd_current'); } catch (_) {}
+      state.currentId = saved || data.currentId;
+    }
+  } catch (e) {
+    setStatus('保存データを読み込めませんでした: ' + e.message, 'err');
+  }
+  if (!state.works.length) state.works.push(newWork('はじめての作品'));
+  if (!cur()) state.currentId = state.works[0].id;
+  renderAll();
+  showSaveState();
+  if (isDirty()) scheduleSave();
+  if (!hasKey()) {
+    setStatus('最初に右上の「⚙ 接続設定」でAPIキーとモデルIDを入れてください。');
+  }
+}
+function rememberCurrent() { try { localStorage.setItem('nd_current', state.currentId); } catch (_) {} }
+
+// 別の端末での変更を取り込む（画面に戻ったとき＋数秒おき）
+function pullSoon() { if (!generating && !leaving) sync(); }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pullSoon(); });
+window.addEventListener('focus', pullSoon);
+setInterval(() => { if (document.visibilityState === 'visible' && !syncing) pullSoon(); }, 5000);
+
+/* ---------- 表示 ---------- */
+function renderWorkSelect() {
+  els.workSelect.innerHTML = '';
+  const sorted = [...state.works].sort((a, b) => b.updatedAt - a.updatedAt);
+  for (const w of sorted) {
+    const o = new Option((w.title || '無題') + '（' + fmt(countChars(w.body)) + '字）', w.id);
+    els.workSelect.add(o);
+  }
+  els.workSelect.value = state.currentId;
+}
+function renderWork() {
+  const w = cur();
+  document.querySelectorAll('[data-field]').forEach((el) => { el.value = w[el.dataset.field] || ''; });
+  els.body.value = w.body || '';
+  els.instruction.value = w.instruction || '';
+  els.target.value = w.target || 2000;
+  updateGoal(); updateCheck(); updateSampleCount();
+  els.body.scrollTop = els.body.scrollHeight;
+}
+function renderSettings() {
+  const s = state.settings;
+  document.querySelectorAll('[data-setting]').forEach((el) => {
+    const v = s[el.dataset.setting];
+    if (el.type === 'checkbox') el.checked = !!v; else el.value = v ?? '';
+  });
+  $('s_apiKey').placeholder = s.apiKeySet ? '設定済み（変えるときだけ入力）' : 'rc_で始まるキー';
+  $('s_ghToken').placeholder = s.githubTokenSet ? '設定済み（変えるときだけ入力）' : 'github_pat_ で始まるトークン';
+}
+function renderAll() { renderWorkSelect(); renderWork(); renderSettings(); updateButtons(); updateCheck(); updateSampleCount(); }
+
+function updateCount(extra) {
+  const n = countChars(els.body.value);
+  const goal = Number(cur() && cur().goal) || 0;
+  els.count.textContent = '本文 ' + fmt(n) + (goal ? ' / ' + fmt(goal) : '') + '字' + (extra ? '（今回 +' + fmt(extra) + '字）' : '');
+}
+function updateGoal() {
+  const w = cur(); if (!w) return;
+  const goal = Number(w.goal) || 0;
+  const n = countChars(w.body);
+  $('goalProgress').textContent = goal ? (n >= goal ? '達成（' + fmt(n) + '字）' : '本文 ' + fmt(n) + '字・あと約' + fmt(goal - n) + '字') : '';
+  updateCount();
+}
+function updateButtons() {
+  const busy = !!generating;
+  [els.sceneBtn, els.continueBtn, els.outlineBtn, els.summaryBtn, els.workSelect, $('newWorkBtn')]
+    .forEach((b) => { b.disabled = busy; });
+  const top = undoStack[undoStack.length - 1];
+  els.undoBtn.disabled = busy || !top || top.workId !== state.currentId;
+  const sceneAct = lastAction && (['scene', 'continue'].includes(lastAction.kind) ? lastAction
+    : (lastAction.kind === 'polish' ? lastAction.scene : null));
+  const below = undoStack[undoStack.length - 2];
+  els.rewriteBtn.disabled = busy || !sceneAct || !top || top.tag !== lastAction.tag ||
+    (lastAction.kind === 'polish' && (!below || below.tag !== sceneAct.tag));
+  els.continueBtn.disabled = busy || !els.body.value.trim();
+  els.polishBtn.disabled = busy || !els.body.value.trim();
+  els.stopBtn.hidden = !busy;
+  els.body.readOnly = busy;
+  els.body.classList.toggle('streaming', busy);
+  document.querySelectorAll('[data-field]').forEach((el) => { el.readOnly = busy; });
+}
+
+/* ---------- 入力の反映 ----------
+   スマホの日本語入力（変換中の確定前の文字）も取りこぼさないよう、
+   input / change / compositionend のどれでも反映する */
+function readFieldEl(el) {
+  const f = el.dataset.field;
+  return f === 'goal' ? (Number(el.value) || 0) : el.value;
+}
+function onEdit(el) {
+  const w = cur(); if (!w) return;
+  const f = el.dataset.field;
+  const v = readFieldEl(el);
+  if (w[f] === v) return;
+  w[f] = v; w.updatedAt = Date.now();
+  if (f === 'title') renderWorkSelect();
+  if (f === 'goal') updateGoal();
+  scheduleSave();
+}
+// 生成の直前に、画面に見えている内容を確実に取り込む
+function flushDom() {
+  if (generating) return;
+  document.querySelectorAll('[data-field]').forEach(onEdit);
+  const w = cur();
+  if (w.body !== els.body.value) { w.body = els.body.value; scheduleSave(); }
+  if (w.instruction !== els.instruction.value) { w.instruction = els.instruction.value; scheduleSave(); }
+  const t = Number(els.target.value) || 2000;
+  if (w.target !== t) { w.target = t; scheduleSave(); }
+}
+['input', 'change', 'compositionend'].forEach((ev) => {
+  document.querySelectorAll('[data-field]').forEach((el) => el.addEventListener(ev, () => onEdit(el)));
+  els.body.addEventListener(ev, () => {
+    if (generating) return;
+    const w = cur(); if (w.body === els.body.value) return;
+    w.body = els.body.value; w.updatedAt = Date.now(); updateCount(); updateGoal(); updateButtons(); scheduleSave();
+  });
+  els.instruction.addEventListener(ev, () => {
+    if (cur().instruction !== els.instruction.value) { cur().instruction = els.instruction.value; scheduleSave(); }
+  });
+  els.target.addEventListener(ev, () => {
+    const t = Number(els.target.value) || 2000;
+    if (cur().target !== t) { cur().target = t; scheduleSave(); }
+  });
+});
+document.querySelectorAll('[data-setting]').forEach((el) => {
+  el.addEventListener('input', () => {
+    const k = el.dataset.setting;
+    if (el.type === 'checkbox') state.settings[k] = el.checked;
+    else if (el.type === 'number') state.settings[k] = el.value === '' ? DEFAULT_SETTINGS[k] : Number(el.value);
+    else state.settings[k] = el.value;
+    scheduleSave();
+  });
+});
+
+/* ---------- 作品の管理 ---------- */
+els.workSelect.addEventListener('change', () => {
+  flushDom();
+  state.currentId = els.workSelect.value; rememberCurrent(); renderWork(); updateButtons(); setStatus('');
+});
+$('newWorkBtn').addEventListener('click', () => {
+  flushDom();
+  const w = newWork('');
+  state.works.push(w); state.currentId = w.id; rememberCurrent(); renderAll(); scheduleSave();
+  setTab('aside'); $('f_title').focus();
+  setStatus('新しい作品を作りました。左の作品設定から埋めていきましょう。', 'ok');
+});
+$('duplicateWorkBtn').addEventListener('click', () => {
+  closeMenu();
+  flushDom();
+  const src = cur();
+  const w = { ...src, id: newWork().id, title: (src.title || '無題') + '（コピー）', updatedAt: Date.now() };
+  state.works.push(w); state.currentId = w.id; rememberCurrent(); renderAll(); scheduleSave();
+  setStatus('作品を複製しました。', 'ok');
+});
+$('deleteWorkBtn').addEventListener('click', () => {
+  closeMenu();
+  const w = cur();
+  if (!confirm('「' + (w.title || '無題') + '」を削除します。元に戻せません。よろしいですか？')) return;
+  state.works = state.works.filter((x) => x.id !== w.id);
+  if (synced.works[w.id]) deletedLocal.add(w.id);
+  if (!state.works.length) state.works.push(newWork('はじめての作品'));
+  state.currentId = state.works[0].id; rememberCurrent();
+  undoStack = undoStack.filter((u) => u.workId !== w.id);
+  renderAll(); scheduleSave();
+});
+function closeMenu() { $('fileMenu').open = false; }
+function download(name, text, type) {
+  const blob = new Blob([text], { type });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function safeName(s) { return (s || '無題').replace(/[\\/:*?"<>|]/g, '_').slice(0, 60); }
+$('exportTxtBtn').addEventListener('click', () => {
+  closeMenu(); const w = cur();
+  download(safeName(w.title) + '.txt', (w.title ? w.title + '\r\n\r\n' : '') + (w.body || '').replace(/\r?\n/g, '\r\n'), 'text/plain;charset=utf-8');
+});
+$('exportWorkBtn').addEventListener('click', () => {
+  closeMenu(); const w = cur();
+  download(safeName(w.title) + '.json', JSON.stringify({ novelDeskWork: 1, work: w }, null, 2), 'application/json');
+});
+$('importWorkBtn').addEventListener('click', () => { closeMenu(); $('importFile').click(); });
+$('importFile').addEventListener('change', async (e) => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    const src = data.work || data;
+    if (typeof src !== 'object' || !('body' in src || 'characters' in src)) throw new Error('作品ファイルではありません');
+    const w = { ...newWork(), ...src, id: newWork().id, updatedAt: Date.now() };
+    state.works.push(w); state.currentId = w.id; rememberCurrent(); renderAll(); scheduleSave();
+    setStatus('「' + (w.title || '無題') + '」を読み込みました。', 'ok');
+  } catch (err) {
+    setStatus('読み込めませんでした: ' + err.message, 'err');
+  }
+});
+
+/* ---------- 設定ダイアログ ---------- */
+const dlg = $('settingsDlg');
+$('settingsBtn').addEventListener('click', () => { renderSettings(); renderLan(); $('pwMsg').textContent = ''; dlg.showModal(); checkUpdate(false); });
+
+/* ---------- アップデート ---------- */
+let updLatest = null;
+async function checkUpdate(silent) {
+  const info = $('updInfo');
+  if (!silent) { $('updMsg').textContent = ''; info.innerHTML = '<p>確認中…</p>'; }
+  try {
+    const j = await (await api('/api/update/check')).json();
+    const p = (t) => { const e = document.createElement('p'); e.textContent = t; return e; };
+    if (!silent) {
+      info.innerHTML = '';
+      info.appendChild(p('今のバージョン：' + (j.current || '不明')));
+    }
+    if (j.error) { if (!silent) info.appendChild(p('最新版を確認できませんでした：' + j.error)); return; }
+    updLatest = j.available ? j.latest : null;
+    $('settingsBtn').classList.toggle('upd', !!j.available);
+    $('updApplyBtn').hidden = !j.available;
+    if (silent) {
+      if (j.available) setStatus('新しいバージョン ' + j.latest + ' があります。「⚙ 接続設定」の一番下から更新できます。');
+      return;
+    }
+    if (j.available) {
+      info.appendChild(p('新しいバージョン：' + j.latest));
+      if (j.notes) { const n = p(j.notes); n.style.whiteSpace = 'pre-wrap'; info.appendChild(n); }
+    } else {
+      info.appendChild(p('最新の状態です。'));
+    }
+  } catch (e) {
+    if (!silent) info.textContent = '確認できませんでした：' + e.message;
+  }
+}
+$('updCheckBtn').addEventListener('click', () => checkUpdate(false));
+$('updApplyBtn').addEventListener('click', async () => {
+  if (generating) { $('updMsg').textContent = '生成が終わってから更新してください。'; return; }
+  if (!confirm('バージョン ' + updLatest + ' に更新して、Novel Desk を再起動します。\n書いた作品と設定はそのまま残ります。よろしいですか？')) return;
+  $('updApplyBtn').disabled = true;
+  $('updMsg').textContent = '保存しています…';
+  await syncAndWait();
+  $('updMsg').textContent = 'ダウンロードしています…';
+  try {
+    const r = await api('/api/update/apply', { method: 'POST' });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error?.message || r.status);
+    if (j.upToDate) { $('updMsg').textContent = 'すでに最新です。'; $('updApplyBtn').disabled = false; return; }
+    $('updMsg').textContent = 'バージョン ' + j.version + ' に更新しました。再起動しています…' +
+      (j.batChanged ? '（今回は起動ファイル start.bat / start-lan.bat も新しくなっています。GitHubから取り直してください）' : '');
+    leaving = true;
+    const until = Date.now() + 45000;
+    const wait = async () => {
+      try {
+        const i = await (await fetch('/api/info', { cache: 'no-store' })).json();
+        if (i.version === j.version) { location.reload(); return; }
+      } catch (_) {}
+      if (Date.now() < until) setTimeout(wait, 1000);
+      else $('updMsg').textContent = '自動で再起動しませんでした。PCの黒い画面を閉じて、start-lan.bat（または start.bat）で起動し直してください。';
+    };
+    setTimeout(wait, 1500);
+  } catch (e) {
+    $('updMsg').textContent = '更新できませんでした：' + e.message;
+    $('updApplyBtn').disabled = false;
+  }
+});
+setTimeout(() => checkUpdate(true), 4000);
+setInterval(() => checkUpdate(true), 6 * 60 * 60 * 1000);
+$('closeSettings').addEventListener('click', () => dlg.close());
+dlg.addEventListener('close', () => { saveNow(); if (hasKey() && els.status.textContent.startsWith('最初に')) setStatus(''); });
+
+async function renderLan() {
+  const box = $('lanInfo');
+  const p = (t, cls) => { const e = document.createElement('p'); e.textContent = t; if (cls) e.className = cls; box.appendChild(e); };
+  try {
+    const i = await (await api('/api/info')).json();
+    box.innerHTML = '';
+    if (!i.lan) {
+      p('今は「このPCだけ」モードです。スマホから使うときは、黒い画面を閉じて start-lan.bat で起動し直してください。');
+    } else {
+      p('スマホを同じWi-Fiにつないで、ブラウザで次のアドレスを開きます:');
+      if (i.urls.length) i.urls.forEach((u) => p(u, 'url'));
+      else p('（ネットワークが見つかりません。Wi-Fiにつながっているか確認してください）');
+    }
+    p(i.passwordSet ? 'パスワード：設定済み' : 'パスワード：未設定（スマホから使うには必要です）');
+    $('pwArea').hidden = !i.isLocal;
+    if (i.isLocal) $('setPwBtn').textContent = i.passwordSet ? '変更' : '設定';
+    else p('パスワードの変更はPCの画面からできます。');
+  } catch (e) {
+    box.textContent = '情報を取得できませんでした。';
+  }
+}
+$('setPwBtn').addEventListener('click', async () => {
+  const pw = $('newPw').value;
+  try {
+    const r = await api('/api/password', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { $('pwMsg').textContent = j.error?.message || '設定できませんでした'; return; }
+    $('newPw').value = '';
+    $('pwMsg').textContent = '設定しました。スマホではこのパスワードでログインします。（変更すると、ログイン済みのスマホもログインし直しになります）';
+    renderLan();
+  } catch (e) { $('pwMsg').textContent = '設定できませんでした: ' + e.message; }
+});
+
+/* ---------- スマホのタブ切り替え ---------- */
+function setTab(t) {
+  document.body.classList.remove('tab-editor', 'tab-aside');
+  document.body.classList.add('tab-' + t);
+  document.querySelectorAll('.mobile-tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
+}
+document.querySelectorAll('.mobile-tabs button').forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab)));
+setTab('editor');
+$('toggleKey').addEventListener('click', () => {
+  const k = $('s_apiKey'); const show = k.type === 'password';
+  k.type = show ? 'text' : 'password'; $('toggleKey').textContent = show ? '隠す' : '表示';
+});
+$('resetSystem').addEventListener('click', () => {
+  if (!confirm('基本ルールを初期値に戻しますか？')) return;
+  state.settings.systemPrompt = DEFAULT_SYSTEM; $('s_system').value = DEFAULT_SYSTEM; scheduleSave();
+});
+
+/* ---------- プロンプト組み立て ---------- */
+function settingsBlock(w, opts = {}) {
+  const parts = [];
+  const add = (h, v) => { if (v && v.trim()) parts.push('## ' + h + '\n' + v.trim()); };
+  add('タイトル', w.title);
+  add('文体・書き方のルール（厳守）', w.style);
+  add('世界観・舞台', w.world);
+  add('登場人物（設定を厳守）', w.characters);
+  if (!opts.noSample && w.sample && w.sample.trim()) {
+    parts.push('## 文体のお手本（文の長さ・リズム・語彙・描写の密度・比喩の量など、書き方だけを真似る。内容・人物・固有名詞・出来事は使わない）\n' +
+      '<お手本>\n' + w.sample.trim() + '\n</お手本>');
+  }
+  if (!opts.noOutline) add('構成案', w.outline);
+  if (!opts.noSummary) add('これまでのあらすじ', w.summary);
+  return parts.length ? '# 作品設定\n' + parts.join('\n\n') : '# 作品設定\n（特になし）';
+}
+function tailOf(text, n) {
+  text = text || '';
+  if (text.length <= n) return { text, cut: false };
+  let t = text.slice(text.length - n);
+  const nl = t.indexOf('\n');
+  if (nl > -1 && nl < 400) t = t.slice(nl + 1); // 段落の頭から渡す
+  return { text: t, cut: true };
+}
+// kind: 'scene'（次の場面）/ 'continue'（途切れた文の続き）/ 'extend'（目安に足りない分の書き足し）
+function buildSceneMessages(w, kind, instruction, amount, bodyText) {
+  const s = state.settings;
+  const tail = tailOf(bodyText, s.contextChars);
+  const inst = (instruction || '').trim();
+  let u = settingsBlock(w) + '\n\n';
+  if (tail.text.trim()) {
+    u += '# 直前までの本文' + (tail.cut ? '（これより前は省略。内容は「これまでのあらすじ」を参照）' : '') + '\n' + tail.text + '\n\n';
+  }
+  u += '# 今回の指示\n';
+  if (kind === 'extend') {
+    u += '直前までの本文の最後は、まだ書いている途中の場面です。最後の文から自然に続けて、同じ場面をさらに書き進めてください。\n';
+    if (inst) u += 'この場面で書くこと: ' + inst + '\n';
+    u += '- これまでの文章を繰り返したり、まとめ直したりしない\n';
+    u += '- 新しい描写・会話・しぐさ・心理の動き・小さな出来事で、場面を具体的に膨らませる\n';
+    u += '- 分量: あと約' + amount + '字。それまでは場面を締めくくらないこと\n';
+  } else if (kind === 'continue') {
+    u += '直前までの本文は途中で途切れています。最後の文の続きから、そのまま自然に書き継いでください。すでに書かれている文章は繰り返さないでください。\n';
+    if (inst) u += 'この場面で書くこと: ' + inst + '\n';
+    u += '分量の目安: 約' + amount + '字。\n';
+  } else {
+    const beats = Math.min(10, Math.max(3, Math.round(amount / 450)));
+    u += (tail.text.trim() ? '直前の本文から自然につながる「次の場面」を書いてください。\n' : 'まだ本文はありません。物語の冒頭の場面を書いてください。\n');
+    u += 'この場面で書くこと: ' + (inst || '構成案に沿って、次に来る場面') + '\n';
+    u += '分量の目安: この場面だけで約' + amount + '字。場面を' + beats + 'つほどの小さな展開に分け、それぞれを描写と会話を重ねて丁寧に書くこと。要約や駆け足の展開は禁止。\n';
+  }
+  u += '※作品設定の中に字数の指定があっても、それは作品全体についてのもの。今回の分量はここに書いた目安に従うこと。\n';
+  u += '本文だけを出力してください。';
+  return [{ role: 'system', content: s.systemPrompt || DEFAULT_SYSTEM }, { role: 'user', content: u }];
+}
+function buildOutlineMessages(w) {
+  const req = (w.outlineRequest || '').trim();
+  const u = settingsBlock(w, { noOutline: true, noSample: true }) + '\n\n# 今回の指示\n' +
+    '上の設定をもとに、この小説の構成案を作ってください。\n' +
+    (req ? '要望: ' + req + '\n' : '') +
+    '形式:\n【全体のあらすじ】3〜5行\n【場面構成】場面ごとに「場面1：（場所・登場人物）」と、起きること・見せ場を2〜3行ずつ\n' +
+    '登場人物の設定は変えないこと。本文は書かないでください。';
+  return [
+    { role: 'system', content: 'あなたは日本語の小説家で、物語の構成を考えるのが得意です。指示された形式だけを出力します。' },
+    { role: 'user', content: u },
+  ];
+}
+function buildSummaryMessages(w) {
+  const tail = tailOf(w.body, 16000);
+  let u = settingsBlock(w, { noSummary: true, noOutline: true, noSample: true }) + '\n\n';
+  if (w.summary && w.summary.trim()) u += '# これまでのあらすじ（前回作成）\n' + w.summary.trim() + '\n\n';
+  u += '# 本文' + (tail.cut ? '（後半部分）' : '') + '\n' + tail.text + '\n\n# 今回の指示\n' +
+    '続きを書く作家のための「これまでのあらすじ」を作ってください。' +
+    (w.summary && w.summary.trim() ? '前回のあらすじと本文の内容を統合し、' : '') +
+    '起きた出来事の流れ、登場人物の現在の状態・関係の変化、未回収の伏線や約束事を中心に、800字以内で簡潔にまとめてください。' +
+    '最後の場面がどこで終わっているかも明記してください。あらすじ以外は出力しないこと。';
+  return [
+    { role: 'system', content: 'あなたは小説の編集者です。正確で簡潔な要約を書きます。' },
+    { role: 'user', content: u },
+  ];
+}
+
+/* ---------- 生成（ストリーミング） ---------- */
+function explainError(status, msg) {
+  const m = (msg || '').toLowerCase();
+  if (status === 401 || status === 403 || m.includes('api key') || m.includes('unauthorized')) {
+    return 'APIキーが正しくないか、今のプランではこのモデルを使えません。（' + msg + '）';
+  }
+  if (status === 429 || m.includes('concurren')) return '同時に使える数の上限です。SillyTavern などで生成中なら終わってから、少し待って試してください。（' + msg + '）';
+  if (m.includes('model') && (m.includes('not found') || m.includes('not exist') || m.includes('unknown') || m.includes('invalid'))) {
+    return 'モデルIDが見つかりません。Featherless のモデル名をそのまま貼ってください。（' + msg + '）';
+  }
+  if (m.includes('context') || m.includes('too long') || m.includes('maximum')) {
+    return '送る文章が長すぎます。接続設定の「渡す直前の本文」か「最大出力」を減らしてください。（' + msg + '）';
+  }
+  return 'エラー（' + status + '）: ' + msg;
+}
+
+// 生成の「1回分の作業」。何回かに分けて書き足すときも、停止ボタンは全体を止める
+function startSession() {
+  const s = { stopped: false, round: null, abort() { this.stopped = true; if (this.round) this.round.abort(); } };
+  generating = s;
+  updateButtons();
+  return s;
+}
+function endSession() { generating = null; updateButtons(); }
+
+async function streamChat(messages, maxTokens, minTokens, onText, onReasoning, session) {
+  const s = state.settings;
+  const payload = {
+    model: (s.model || '').trim(), messages, stream: true,
+    temperature: Number(s.temperature), top_p: Number(s.top_p),
+    repetition_penalty: Number(s.repetition_penalty), max_tokens: Math.round(maxTokens),
+  };
+  if (minTokens) payload.min_tokens = Math.round(minTokens);
+  if (Number(s.min_p) > 0) payload.min_p = Number(s.min_p);
+  if (s.disableThinking) payload.chat_template_kwargs = { enable_thinking: false };
+
+  const round = new AbortController();
+  session.round = round;
+  if (session.stopped) round.abort();
+  let finish = null;
+  try {
+    const r = await api('/api/chat', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey: s.apiKey, payload }), signal: round.signal,
+    });
+    if (!r.ok) {
+      const t = await r.text();
+      let msg = t;
+      try { const j = JSON.parse(t); msg = j.error?.message || j.detail || j.message || t; } catch (_) {}
+      throw new Error(explainError(r.status, typeof msg === 'string' ? msg : JSON.stringify(msg)));
+    }
+    const ctype = r.headers.get('content-type') || '';
+    if (!ctype.includes('event-stream')) {
+      // 念のため：ストリームでない返事にも対応
+      const j = await r.json();
+      if (j.error) throw new Error(explainError(r.status, j.error.message || JSON.stringify(j.error)));
+      onText(j.choices?.[0]?.message?.content || '');
+      return j.choices?.[0]?.finish_reason || null;
+    }
+    const reader = r.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    for (;;) {
+      if (round.signal.aborted) { reader.cancel().catch(() => {}); break; }
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (let line of lines) {
+        if (round.signal.aborted) break; // 止めた後に届いた分は使わない
+        line = line.trim();
+        if (!line.startsWith('data:')) continue;
+        const data = line.slice(5).trim();
+        if (!data || data === '[DONE]') continue;
+        let j;
+        try { j = JSON.parse(data); } catch (_) { continue; }
+        if (j.error) throw new Error(explainError(500, j.error.message || JSON.stringify(j.error)));
+        const ch = j.choices && j.choices[0];
+        if (!ch) continue;
+        const d = ch.delta || {};
+        if (d.reasoning_content || d.reasoning) onReasoning && onReasoning();
+        if (d.content) onText(d.content);
+        if (ch.finish_reason) finish = ch.finish_reason;
+      }
+    }
+    return finish;
+  } finally {
+    session.round = null;
+  }
+}
+
+// 生成で書き換える項目（本文・構成案・あらすじのどれか1つ）だけを覚えて、取り消しで戻せるようにする
+function pushUndo(tag, field) {
+  const w = cur();
+  undoStack.push({ workId: w.id, tag, field, value: w[field] });
+  if (undoStack.length > 20) undoStack.shift();
+}
+function estimateOk(messages, maxTokens) {
+  const chars = messages.reduce((a, m) => a + m.content.length, 0);
+  if (chars + maxTokens > 31000) {
+    return confirm('送る文章がおよそ ' + fmt(chars) + '字あり、32Kプランの上限を超えるかもしれません。\n' +
+      '接続設定の「渡す直前の本文」を減らし、「これまでのあらすじ」を使うのがおすすめです。\nこのまま送りますか？');
+  }
+  return true;
+}
+function checkReady() {
+  if (!hasKey()) { setStatus('APIキーが未設定です。右上の「⚙ 接続設定」から入れてください。', 'err'); return false; }
+  if (!(state.settings.model || '').trim()) { setStatus('モデルIDが未設定です。', 'err'); return false; }
+  return true;
+}
+
+const SENT_END = /[。」』！？!?…）)]/;
+
+// 同じ文字列が何度も繰り返されていたら、繰り返しが始まった位置を返す（なければ -1）
+function findLoop(text) {
+  const tail = text.slice(-1200);
+  const offset = text.length - tail.length;
+  for (let p = 2; p <= 200; p++) {
+    if (tail.length < p * 3) break;
+    const unit = tail.slice(-p);
+    let count = 1;
+    let pos = tail.length - p;
+    while (pos - p >= 0 && tail.slice(pos - p, pos) === unit) { count++; pos -= p; }
+    if (count >= 3 && count * p >= 80) return offset + pos + p; // 最初の1回分は残す
+  }
+  return -1;
+}
+// 本文に紛れ込む記号やメモ（**、（※場面2 終了）、【完】など）を取り除く
+const END_MARK = /[（(【［\[]\s*※?[^）)】］\]\n]{0,24}?(終了|終わり|完|了|続く|END|End|end|TO BE CONTINUED)\s*[）)】］\]]/;
+function cleanText(t) {
+  return t
+    .replace(/\*\*_?\*\*|\*\*|__+/g, '')
+    .replace(new RegExp(END_MARK.source, 'g'), '')
+    .replace(/（※[^）\n]{0,40}）/g, '')
+    .replace(/^\s*(-{3,}|―{3,}|={3,}|＊\s*＊\s*＊|\*\s*\*\s*\*)\s*$/gm, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n');
+}
+// 文の切れ目まで戻す（会話の途中で切れないよう、段落の終わり→かぎかっこの終わり→句点の順に探す）
+function trimToSentence(text) {
+  const t = text.replace(/\s+$/, '');
+  if (!t || SENT_END.test(t.slice(-1))) return t; // すでに文の終わりで止まっている
+  const minKeep = Math.floor(t.length * 0.6);
+  for (let i = t.length - 1; i >= minKeep; i--) {
+    if (t[i] === '\n' && SENT_END.test(t[i - 1] || '')) return t.slice(0, i);
+  }
+  for (const re of [/[」』]/, /[。！？!?]/]) {
+    for (let i = t.length - 1; i >= minKeep; i--) if (re.test(t[i])) return t.slice(0, i + 1);
+  }
+  return t;
+}
+
+async function runScene(kind, instruction, target) {
+  if (generating) return;
+  flushDom();
+  if (!checkReady()) return;
+  els.sceneBtn.disabled = true;
+  await syncAndWait();
+  const w = cur();
+  const s = state.settings;
+  const auto = s.autoLength !== false;
+  const maxFor = (n) => Math.max(512, Math.min(Number(s.max_tokens) || 4096, Math.round(n * 2.2)));
+
+  let base = w.body || '';
+  if (kind === 'scene' && base.trim()) base = base.replace(/\s+$/, '') + '\n\n';
+  const firstMsgs = buildSceneMessages(w, kind, instruction, target, w.body || '');
+  if (!estimateOk(firstMsgs, maxFor(target))) { updateButtons(); return; }
+
+  const tag = 'g' + Date.now();
+  pushUndo(tag, 'body');
+  lastAction = { kind, instruction, target, tag };
+
+  let gen = '';
+  let raf = 0;
+  const paint = () => {
+    raf = 0;
+    const atBottom = els.body.scrollHeight - els.body.scrollTop - els.body.clientHeight < 120;
+    els.body.value = base + gen;
+    if (atBottom) els.body.scrollTop = els.body.scrollHeight;
+    updateCount(countChars(gen));
+  };
+  setStatus(kind === 'continue' ? '続きを書いています…' : '書いています…（モデルによっては書き始めまで数十秒かかります）');
+
+  const session = startSession();
+  let finish = null, error = null, rounds = 0, loopHit = false;
+  try {
+    for (;;) {
+      rounds += 1;
+      const countBefore = countChars(gen);
+      const remaining = target - countBefore;
+      let msgs = firstMsgs, maxTok = maxFor(target);
+      const minTok = 0; // 最低字数を強制すると、書き終えたモデルが同じ文を繰り返す原因になるので使わない
+      if (rounds > 1) {
+        msgs = buildSceneMessages(w, 'extend', instruction, remaining, base + gen);
+        maxTok = maxFor(remaining * 1.3);
+        setStatus('目安の' + fmt(target) + '字に足りないので書き足しています…（あと約' + fmt(remaining) + '字・' + rounds + '回目）');
+      }
+      // 書き足しのつなぎ目：文の終わりで止まっていれば改行して次の段落へ、文の途中ならそのまま続ける
+      let joiner = '';
+      if (rounds > 1 && gen && !/\n$/.test(gen)) joiner = SENT_END.test(gen.slice(-1)) ? '\n' : '';
+      let roundText = '';
+      let softStop = false, wantStop = false, looped = false, ended = false;
+      try {
+        finish = await streamChat(msgs, maxTok, minTok, (t) => {
+          if (!roundText) {
+            if (kind === 'scene' || rounds > 1) t = t.replace(/^[\r\n \t]+/, ''); // 全角スペースの字下げは残す
+            if (!t) return;
+            gen += joiner;
+          }
+          const before = gen.length;
+          roundText += t;
+          gen += t;
+          const loopAt = findLoop(gen);
+          if (loopAt >= 0) { gen = gen.slice(0, loopAt); looped = true; softStop = true; session.round && session.round.abort(); return; }
+          const em = END_MARK.exec(gen.slice(Math.max(0, before - 30)));
+          if (em) { gen = gen.slice(0, Math.max(0, before - 30) + em.index); ended = true; softStop = true; session.round && session.round.abort(); return; }
+          if (auto) {
+            const n = countChars(gen);
+            if (n >= target * 1.15) wantStop = true;
+            if (wantStop) {
+              // 目安を少し超えたら、段落の切れ目で止める
+              const idx = gen.lastIndexOf('\n');
+              if (idx >= before && idx > 0 && SENT_END.test(gen[idx - 1])) {
+                gen = gen.slice(0, idx); softStop = true; session.round && session.round.abort(); return;
+              }
+            }
+            if (n >= target * 1.4) { softStop = true; session.round && session.round.abort(); }
+          }
+          if (!raf) raf = requestAnimationFrame(paint);
+        }, () => setStatus('考えています…（思考部分は本文に入れません）'), session);
+      } catch (e) {
+        if (e.name !== 'AbortError') throw e;
+        if (!softStop) break; // 停止ボタン
+      }
+      if (softStop) {
+        gen = trimToSentence(cleanText(gen));
+        finish = 'stop';
+        if (looped) { loopHit = true; break; }   // 繰り返しになったら、それ以上は書かせない
+        if (!ended || !auto) break;              // 目安を超えて止めたとき
+        // モデルが「終了」の印を書いて場面を閉じたとき → 足りなければ書き足しへ
+      } else {
+        gen = cleanText(gen);
+      }
+      if (session.stopped || !auto) break;
+      if (countChars(gen) >= target * 0.85) break;       // 目安に届いた
+      if (rounds >= 5 || countChars(gen) - countBefore < 40) break; // それ以上書けないとき
+    }
+  } catch (e) {
+    error = e;
+  } finally {
+    endSession();
+  }
+  if (raf) cancelAnimationFrame(raf);
+  paint();
+  w.body = base + gen; w.updatedAt = Date.now();
+  if (!gen) { // 何も書かれなかったら元に戻す
+    const u = undoStack.pop(); if (u) w.body = u.value; els.body.value = w.body; lastAction = null;
+  }
+  if (gen) lastGen = { workId: w.id, start: base.length, text: gen };
+  updateCount(); updateGoal(); updateButtons(); renderWorkSelect(); updateCheck(); sync();
+  const added = countChars(gen);
+  const extra = rounds > 1 ? '（' + rounds + '回に分けて書きました）' : '';
+  if (error) setStatus(error.message + (gen ? '（途中までの文章は残しています）' : ''), 'err');
+  else if (session.stopped) setStatus('停止しました。' + (gen ? fmt(added) + '字を書きました。不要なら「取り消し」。' : ''));
+  else if (loopHit) setStatus(fmt(added) + '字を書いたところで、モデルが同じ文を繰り返し始めたので止めて、繰り返し部分を消しました。足りなければ「続きを書く」か「書き直す」。', 'ok');
+  else if (auto && added < target * 0.85) setStatus(fmt(added) + '字を書きました（目安 ' + fmt(target) + '字に届きませんでした）。足りなければ「続きを書く」で書き足せます。', 'ok');
+  else if (!auto && finish === 'length') setStatus(fmt(added) + '字を書いたところで出力の上限に達しました。「続きを書く」で書き継げます。', 'ok');
+  else setStatus(fmt(added) + '字を書きました（目安 ' + fmt(target) + '字）' + extra + '。気に入らなければ「書き直す」、続けるなら次の指示を入れて「次の場面を書く」。', 'ok');
+  if (s.autoPolish && gen && !error && !session.stopped && state.currentId === w.id) {
+    const msg = els.status.textContent;
+    await runPolish(true);
+    if (els.status.className !== 'err' && !els.status.textContent) setStatus(msg, 'ok');
+  }
+}
+
+async function runFieldGen(kind) {
+  if (generating) return;
+  flushDom();
+  if (!checkReady()) return;
+  await syncAndWait();
+  const w = cur();
+  const field = kind === 'outline' ? 'outline' : 'summary';
+  if (kind === 'summary' && !(w.body || '').trim()) { setStatus('まだ本文がありません。', 'err'); return; }
+  if ((w[field] || '').trim() && kind === 'outline' &&
+      !confirm('いまの構成案を新しい案で置き換えます（「取り消し」で戻せます）。よろしいですか？')) return;
+  const messages = kind === 'outline' ? buildOutlineMessages(w) : buildSummaryMessages(w);
+  const maxTokens = kind === 'outline' ? 2500 : 1500;
+  if (!estimateOk(messages, maxTokens)) return;
+  const tag = 'f' + Date.now();
+  pushUndo(tag, field);
+  lastAction = { kind, tag };
+  const el = $(kind === 'outline' ? 'f_outline' : 'f_summary');
+  let out = '';
+  setStatus(kind === 'outline' ? '構成案を考えています…' : '本文を要約しています…');
+  const session = startSession();
+  let error = null;
+  try {
+    await streamChat(messages, maxTokens, 0, (t) => { out += t; el.value = out.replace(/^\s+/, ''); el.scrollTop = el.scrollHeight; },
+      () => setStatus('考えています…'), session);
+  } catch (e) { if (e.name !== 'AbortError') error = e; }
+  finally { endSession(); }
+  out = out.trim();
+  if (out) { w[field] = out; w.updatedAt = Date.now(); }
+  else { undoStack.pop(); el.value = w[field] || ''; lastAction = null; }
+  updateButtons(); sync();
+  if (error) setStatus(error.message, 'err');
+  else if (session.stopped) setStatus('停止しました。');
+  else setStatus(kind === 'outline' ? '構成案を作りました。自由に手直ししてOKです。' : 'あらすじを更新しました。間違いがあれば直してください。', 'ok');
+}
+
+function undo() {
+  const u = undoStack[undoStack.length - 1];
+  if (!u || u.workId !== state.currentId) return false;
+  undoStack.pop();
+  const w = cur();
+  w[u.field] = u.value; w.updatedAt = Date.now();
+  applyFieldsToDom(new Set([u.field]));
+  if (u.field === 'body') els.body.scrollTop = els.body.scrollHeight;
+  renderWorkSelect(); updateButtons(); sync();
+  return u;
+}
+
+/* ---------- 文体チェック（避けたい表現の検出） ---------- */
+function escapeRe(t) { return t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+function avoidPatterns() {
+  return (state.settings.avoidList || '').split('\n').map((l) => l.trim())
+    .filter((l) => l && !l.startsWith('#'))
+    .map((l) => {
+      const segs = l.split(/[〜～]/);
+      while (segs.length && !segs[0]) segs.shift();          // 先頭・末尾の「〜」は無視
+      while (segs.length && !segs[segs.length - 1]) segs.pop();
+      if (!segs.length) return null;
+      const src = segs.map(escapeRe).join('[^。！？\\n]{0,20}?');
+      try { return { label: l, re: new RegExp(src, 'g') }; } catch (_) { return null; }
+    }).filter(Boolean);
+}
+function findHits(text) {
+  const hits = [];
+  for (const p of avoidPatterns()) {
+    p.re.lastIndex = 0;
+    let m;
+    while ((m = p.re.exec(text))) {
+      if (!m[0]) { p.re.lastIndex++; continue; }
+      hits.push({ start: m.index, end: m.index + m[0].length, word: m[0], label: p.label });
+    }
+  }
+  hits.sort((a, b) => a.start - b.start || b.end - a.end);
+  const out = [];
+  for (const h of hits) if (!out.length || h.start >= out[out.length - 1].end) out.push(h); // 重なりは1つに
+  return out;
+}
+function sentenceAt(text, i, j) {
+  let a = i; while (a > 0 && !/[。！？\n]/.test(text[a - 1])) a--;
+  let b = j; while (b < text.length && !/[。！？\n]/.test(text[b])) b++;
+  if (b < text.length && text[b] !== '\n') b++;
+  return { a, b };
+}
+function esc(t) { return t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function markHits(text) {
+  const hits = findHits(text);
+  let html = '', pos = 0;
+  for (const h of hits) { html += esc(text.slice(pos, h.start)) + '<mark>' + esc(text.slice(h.start, h.end)) + '</mark>'; pos = h.end; }
+  return { html: html + esc(text.slice(pos)), count: hits.length };
+}
+
+let checkTimer = null;
+function scheduleCheck() { clearTimeout(checkTimer); checkTimer = setTimeout(updateCheck, 400); }
+function updateCheck() {
+  const text = els.body.value;
+  const hits = findHits(text);
+  els.checkBtn.textContent = '文体チェック ' + hits.length + '件';
+  els.checkBtn.classList.toggle('has', hits.length > 0);
+  if (els.checkPanel.hidden) return;
+  const p = els.checkPanel;
+  p.innerHTML = '';
+  const head = document.createElement('div');
+  head.className = 'chk-head';
+  head.textContent = hits.length
+    ? '避けたい表現が ' + hits.length + ' 件あります。タップすると本文のその場所を選択します。'
+    : '避けたい表現は見つかりませんでした。（リストは「作品設定」タブの一番下で編集できます）';
+  p.appendChild(head);
+  // 新しい方（本文の後ろ）から並べる
+  for (const h of hits.slice().reverse().slice(0, 200)) {
+    const { a, b } = sentenceAt(text, h.start, h.end);
+    const btn = document.createElement('button');
+    btn.className = 'chk-item';
+    const pre = text.slice(Math.max(a, h.start - 60), h.start);
+    const post = text.slice(h.end, Math.min(b, h.end + 60));
+    btn.innerHTML = (h.start - 60 > a ? '…' : '') + esc(pre) + '<mark>' + esc(h.word) + '</mark>' + esc(post) + (h.end + 60 < b ? '…' : '');
+    btn.addEventListener('click', () => jumpTo(h.start, h.end));
+    p.appendChild(btn);
+  }
+}
+function jumpTo(start, end) {
+  const el = els.body;
+  setTab('editor');
+  const ratio = start / Math.max(1, el.value.length);
+  el.scrollTop = Math.max(0, ratio * el.scrollHeight - el.clientHeight / 2);
+  el.focus({ preventScroll: true });
+  el.setSelectionRange(start, end);
+  // 選択位置まで確実にスクロールさせる
+  el.blur(); el.focus();
+  el.setSelectionRange(start, end);
+}
+els.checkBtn.addEventListener('click', () => {
+  els.checkPanel.hidden = !els.checkPanel.hidden;
+  updateCheck();
+});
+['input', 'change'].forEach((ev) => {
+  els.body.addEventListener(ev, scheduleCheck);
+  $('s_avoid').addEventListener(ev, scheduleCheck);
+  $('f_sample').addEventListener(ev, updateSampleCount);
+});
+function updateSampleCount() {
+  const n = countChars($('f_sample').value);
+  $('sampleCount').textContent = n ? fmt(n) + '字' + (n > 3000 ? '（長すぎると本文に使える枠が減ります）' : '') : 'いちばん効きます';
+}
+$('resetRules').addEventListener('click', () => {
+  if (!confirm('推敲のチェック項目を初期値に戻しますか？')) return;
+  state.settings.polishRules = DEFAULT_RULES; $('s_rules').value = DEFAULT_RULES; scheduleSave();
+});
+
+/* ---------- 推敲 ---------- */
+let lastGen = null; // { workId, start, text } … 直前に生成した部分
+function polishRange(w) {
+  const body = w.body || '';
+  const el = els.body;
+  const a = el.selectionStart, b = el.selectionEnd;
+  if (typeof a === 'number' && b - a >= 20 && el.value === body) {
+    return { start: a, end: b, label: '選択した部分' };
+  }
+  if (lastGen && lastGen.workId === w.id && lastGen.text &&
+      body.slice(lastGen.start, lastGen.start + lastGen.text.length) === lastGen.text) {
+    return { start: lastGen.start, end: lastGen.start + lastGen.text.length, label: '直前に書いた部分' };
+  }
+  if (!body.trim()) return null;
+  let start = Math.max(0, body.length - 3000);
+  if (start > 0) { const nl = body.indexOf('\n', start); if (nl > -1 && nl < start + 500) start = nl + 1; }
+  return { start, end: body.length, label: '本文の最後の約' + fmt(countChars(body.slice(start))) + '字' };
+}
+// 長い範囲は段落の切れ目で分けて、順番に推敲する
+function splitChunks(text, size) {
+  const out = [];
+  let rest = text;
+  while (rest.length > size) {
+    let cut = rest.lastIndexOf('\n', size);
+    if (cut < size * 0.5) cut = size;
+    out.push(rest.slice(0, cut + (rest[cut] === '\n' ? 1 : 0)));
+    rest = rest.slice(cut + (rest[cut] === '\n' ? 1 : 0));
+  }
+  if (rest) out.push(rest);
+  return out;
+}
+function buildPolishMessages(w, text, before) {
+  const s = state.settings;
+  const parts = [];
+  const add = (h, v) => { if (v && v.trim()) parts.push('## ' + h + '\n' + v.trim()); };
+  add('文体・書き方のルール', w.style);
+  add('登場人物（設定は変えない）', w.characters);
+  if (w.sample && w.sample.trim()) add('文体のお手本（この書き方に近づける。内容は使わない）', '<お手本>\n' + w.sample.trim() + '\n</お手本>');
+  let u = parts.length ? '# 作品の情報\n' + parts.join('\n\n') + '\n\n' : '';
+  u += '# 推敲のチェック項目\n' + ((s.polishRules || '').trim() || DEFAULT_RULES) + '\n\n';
+  const avoid = avoidPatterns();
+  if (avoid.length) {
+    u += '# 避けたい表現（言い換えるか、必要なければ削る）\n' + avoid.map((a) => '- ' + a.label).join('\n') + '\n\n';
+    const hits = findHits(text);
+    if (hits.length) {
+      u += '# この本文で見つかった「避けたい表現」（必ず直す）\n' + hits.slice(0, 40).map((h) => {
+        const { a, b } = sentenceAt(text, h.start, h.end);
+        return '- ' + text.slice(a, b).trim() + '（' + h.word + '）';
+      }).join('\n') + '\n\n';
+    }
+  }
+  if (before.trim()) u += '# 直前の文脈（参考。出力には含めない）\n' + before.trim() + '\n\n';
+  u += '# 推敲する本文\n<本文>\n' + text.replace(/\s+$/, '') + '\n</本文>\n\n# 指示\n' + [
+    '上の<本文>を推敲してください。',
+    '- チェック項目と避けたい表現に当てはまる箇所を直す。当てはまらない文は、できるだけそのまま残す',
+    '- 出来事・台詞の内容・登場人物の言動・設定は変えない。新しい展開を足さない',
+    '- 分量はほぼ同じに保つ（削りすぎない）',
+    '- 段落の区切りと行頭の字下げは元の本文に合わせる',
+    '- 推敲後の本文だけを出力する（<本文>タグ・解説・前置き・変更点の説明は書かない）',
+  ].join('\n');
+  return [
+    { role: 'system', content: 'あなたは日本語小説の熟練した編集者です。作家の文章を、その作家の文体を保ったまま推敲します。' },
+    { role: 'user', content: u },
+  ];
+}
+
+const pdlg = $('polishDlg');
+let polishJob = null; // { workId, start, end, original, result, label, auto }
+
+function renderPolishDialog(job, streamingText) {
+  const after = streamingText != null ? streamingText : job.result || '';
+  const m = markHits(after);
+  $('polishAfter').innerHTML = m.html || '<span class="note">書いています…</span>';
+  const mb = markHits(job.original);
+  $('polishBefore').innerHTML = mb.html;
+  const na = countChars(after), nb = countChars(job.original);
+  $('polishAfterCount').textContent = '（' + fmt(na) + '字・避けたい表現 ' + m.count + '件）';
+  $('polishBeforeCount').textContent = '（' + fmt(nb) + '字・避けたい表現 ' + mb.count + '件）';
+  const busy = !!generating;
+  $('polishStop').hidden = !busy;
+  $('polishApply').disabled = busy || !after.trim();
+  $('polishRetry').disabled = busy;
+  let info = job.label + 'を推敲' + (busy ? 'しています…' : 'しました。');
+  if (!busy && job.partial) info += '途中で止まったため、残りは元の文章のままです。';
+  if (!busy && na < nb * 0.7) info += '※元より大きく短くなっています。内容が抜けていないか確認してください。';
+  $('polishInfo').textContent = info;
+}
+
+async function runPolish(auto) {
+  if (generating) return null;
+  flushDom();
+  if (!checkReady()) return null;
+  await syncAndWait();
+  const w = cur();
+  const range = polishRange(w);
+  if (!range) { setStatus('推敲する本文がありません。', 'err'); return null; }
+  const original = w.body.slice(range.start, range.end);
+  const job = { workId: w.id, start: range.start, end: range.end, original, result: '', label: range.label, auto, partial: false };
+  polishJob = job;
+  const s = state.settings;
+  const chunks = splitChunks(original, 3500);
+  if (!auto) { renderPolishDialog(job, ''); if (!pdlg.open) pdlg.showModal(); }
+  setStatus(range.label + 'を推敲しています…');
+  const session = startSession();
+  if (!auto) renderPolishDialog(job, '');
+  let done = '', error = null, offset = 0;
+  try {
+    for (let i = 0; i < chunks.length; i++) {
+      const ch = chunks[i];
+      const before = (w.body.slice(0, range.start) + original.slice(0, offset)).slice(-600);
+      const msgs = buildPolishMessages(w, ch, before);
+      const maxTok = Math.min(Math.max(Number(s.max_tokens) || 4096, 1024), Math.round(ch.length * 1.8) + 256, 8000);
+      let part = '';
+      let raf = 0;
+      try {
+        await streamChat(msgs, Math.max(512, maxTok), 0, (t) => {
+          part += t;
+          const loopAt = findLoop(part);
+          if (loopAt >= 0) { part = part.slice(0, loopAt); session.round && session.round.abort(); return; }
+          if (!auto && !raf) raf = requestAnimationFrame(() => { raf = 0; renderPolishDialog(job, done + part); });
+        }, () => setStatus('考えています…'), session);
+      } catch (e) {
+        if (e.name !== 'AbortError') throw e;
+      }
+      if (raf) cancelAnimationFrame(raf);
+      if (session.stopped) {
+        job.partial = true;
+        done += original.slice(offset); // 残りは元のまま
+        break;
+      }
+      part = cleanText(part).replace(/^\s*<本文>\s*\n?|\s*<\/本文>\s*$/g, '').replace(/^\n+/, '').replace(/\s+$/, '');
+      if (!part) part = ch.replace(/\s+$/, ''); // 何も返らなければ元のまま
+      const tailWs = (ch.match(/\s*$/) || [''])[0];
+      done += part + (tailWs.includes('\n') ? '\n' : tailWs);
+      offset += ch.length;
+    }
+  } catch (e) {
+    error = e;
+    job.partial = true;
+    done += original.slice(offset);
+  } finally {
+    endSession();
+  }
+  // 元の範囲の末尾の改行は保つ
+  if (/\n$/.test(original) && !/\n$/.test(done)) done += '\n';
+  if (!/\n$/.test(original)) done = done.replace(/\s+$/, '');
+  job.result = done;
+  if (error) setStatus(error.message, 'err');
+  else setStatus('');
+  if (auto) {
+    // 自動推敲：大きく縮んだときなどは確認してもらう
+    if (!error && countChars(done) >= countChars(original) * 0.7 && !job.partial) return applyPolish(job, true);
+    renderPolishDialog(job); if (!pdlg.open) pdlg.showModal();
+    return null;
+  }
+  renderPolishDialog(job);
+  return null;
+}
+
+function applyPolish(job, auto) {
+  const w = state.works.find((x) => x.id === job.workId);
+  if (!w || w.body.slice(job.start, job.end) !== job.original) {
+    setStatus('推敲中に本文が変わったため、反映できませんでした。もう一度「推敲する」を押してください。', 'err');
+    return false;
+  }
+  const tag = 'p' + Date.now();
+  if (state.currentId === w.id) pushUndo(tag, 'body');
+  // 自動推敲のあとも「書き直す」で場面ごと書き直せるように、元の場面の情報を持っておく
+  const prev = lastAction;
+  lastAction = { kind: 'polish', tag, scene: auto && prev && ['scene', 'continue'].includes(prev.kind) ? prev : null };
+  w.body = w.body.slice(0, job.start) + job.result + w.body.slice(job.end);
+  w.updatedAt = Date.now();
+  lastGen = { workId: w.id, start: job.start, text: job.result };
+  if (state.currentId === w.id) { els.body.value = w.body; updateCount(); updateGoal(); }
+  updateButtons(); renderWorkSelect(); updateCheck(); sync();
+  const before = findHits(job.original).length, after = findHits(job.result).length;
+  setStatus((auto ? '自動で推敲しました' : '推敲を反映しました') + '（避けたい表現 ' + before + '件 → ' + after + '件）。元に戻すなら「取り消し」。', 'ok');
+  return true;
+}
+
+els.polishBtn.addEventListener('click', () => runPolish(false));
+$('polishStop').addEventListener('click', () => { if (generating) generating.abort(); });
+$('polishCancel').addEventListener('click', () => { if (generating) generating.abort(); pdlg.close(); setStatus('推敲をやめました。'); });
+$('polishApply').addEventListener('click', () => { if (polishJob && applyPolish(polishJob, false)) pdlg.close(); });
+$('polishRetry').addEventListener('click', async () => {
+  if (!polishJob || generating) return;
+  // 同じ範囲をもう一度（範囲を選択した状態にしてから推敲）
+  const job = polishJob;
+  if (job.workId !== state.currentId) return;
+  els.body.setSelectionRange(job.start, job.end);
+  await runPolish(false);
+});
+pdlg.addEventListener('cancel', (e) => { if (generating) { e.preventDefault(); } });
+
+/* ---------- ボタン ---------- */
+function readTarget() { return Math.max(300, Math.min(8000, Number(els.target.value) || 2000)); }
+els.sceneBtn.addEventListener('click', () => runScene('scene', els.instruction.value, readTarget()));
+els.continueBtn.addEventListener('click', () => runScene('continue', '', Math.min(readTarget(), 1500)));
+els.rewriteBtn.addEventListener('click', () => {
+  if (!lastAction) return;
+  let a = lastAction;
+  if (a.kind === 'polish') { if (!a.scene || !undo()) return; a = a.scene; } // 推敲を戻してから
+  if (undo()) { setStatus('書き直しています…'); runScene(a.kind, a.instruction, a.target); }
+});
+els.undoBtn.addEventListener('click', () => {
+  if (undo()) { lastAction = null; updateButtons(); setStatus('直前の生成を取り消しました。'); }
+});
+els.stopBtn.addEventListener('click', () => { if (generating) generating.abort(); });
+els.outlineBtn.addEventListener('click', () => runFieldGen('outline'));
+els.summaryBtn.addEventListener('click', () => runFieldGen('summary'));
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !generating && !dlg.open) {
+    e.preventDefault(); els.sceneBtn.click();
+  }
+});
+document.addEventListener('click', (e) => {
+  const m = $('fileMenu'); if (m.open && !m.contains(e.target)) m.open = false;
+});
+window.addEventListener('beforeunload', (e) => {
+  if (leaving) return;
+  if (generating || isDirty()) { sync(); e.preventDefault(); e.returnValue = ''; }
+});
+
+load();
+</script>
+</body>
+</html>

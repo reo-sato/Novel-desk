@@ -1,0 +1,3 @@
+# Windows用ファイルは改行コードをそのまま保存する
+*.bat -text
+README.txt -text
