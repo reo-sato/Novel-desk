@@ -1,8 +1,13 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "repo": "reo-sato/Novel-desk",
   "branch": "main",
   "batVersion": "2",
-  "files": ["server.js", "index.html", "README.txt", "version.json"],
-  "notes": "文体のお手本・避けたい表現のチェック・推敲機能を追加。アプリ内アップデートに対応。"
+  "files": [
+    "server.js",
+    "index.html",
+    "README.txt",
+    "version.json"
+  ],
+  "notes": "作品設定に「全体のあらすじ」欄を追加（物語の始まりから結末まで）。「あらすじを作る」ボタンで自動作成でき、構成案はあらすじに沿って場面に分けるようになりました。"
 }

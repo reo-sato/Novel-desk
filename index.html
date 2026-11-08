@@ -234,15 +234,23 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
       <textarea id="f_chars" data-field="characters" rows="9" placeholder="例：&#10;・カシアン（22）…ヴァルモン家次期当主。皮肉屋だが根は誠実。一人称「俺」。&#10;・エレナ（20）…ローゼン家当主。プラチナブロンド。気位が高いが情に脆い。丁寧語で話す。"></textarea>
     </div>
     <div class="field">
-      <label for="f_outline">構成案</label>
-      <textarea id="f_outline" data-field="outline" rows="9" placeholder="全体の流れ・場面ごとの予定。自分で書いても、下のボタンで作らせてもOK。"></textarea>
+      <label for="f_plot">全体のあらすじ <span class="hint">物語の始まりから結末まで</span></label>
+      <textarea id="f_plot" data-field="plot" rows="8" placeholder="物語全体の流れ（始まり・山場・結末）。自分で書いても、下のボタンで作らせてもOK。モデルはこれを物語の行き先として、いま書く場面を書きます。"></textarea>
+      <div class="row">
+        <input id="f_plotReq" data-field="plotRequest" placeholder="あらすじへの要望（例：結末は二人が結ばれる）">
+        <button id="plotBtn" class="small">あらすじを作る</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="f_outline">構成案 <span class="hint">場面ごとの予定</span></label>
+      <textarea id="f_outline" data-field="outline" rows="9" placeholder="場面ごとの予定。全体のあらすじを書いてからボタンを押すと、それに沿って場面に分けます。"></textarea>
       <div class="row">
         <input id="f_outlineReq" data-field="outlineRequest" placeholder="構成への要望（例：全6場面、後半で立場が逆転）">
         <button id="outlineBtn" class="small">構成案を作る</button>
       </div>
     </div>
     <div class="field">
-      <label for="f_summary">これまでのあらすじ <span class="hint">本文が長くなったら更新</span></label>
+      <label for="f_summary">これまでのあらすじ <span class="hint">書き終えた部分の要約</span></label>
       <textarea id="f_summary" data-field="summary" rows="7" placeholder="本文が長くなると前半はモデルに渡せないので、ここに要約を置いておきます。"></textarea>
       <div class="row" style="justify-content:flex-end">
         <button id="summaryBtn" class="small">本文から要約を作る</button>
@@ -465,7 +473,7 @@ function newWork(title) {
   return {
     id: 'w' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     title: title || '',
-    style: '', sample: '', world: '', characters: '', outline: '', outlineRequest: '', summary: '', body: '',
+    style: '', sample: '', world: '', characters: '', plot: '', plotRequest: '', outline: '', outlineRequest: '', summary: '', body: '',
     instruction: '', target: 2000, goal: 0,
     updatedAt: Date.now(),
   };
@@ -482,7 +490,7 @@ const els = {
   workSelect: $('workSelect'), body: $('body'), instruction: $('instruction'), target: $('target'),
   status: $('status'), count: $('countLabel'), saveState: $('saveState'),
   sceneBtn: $('sceneBtn'), continueBtn: $('continueBtn'), rewriteBtn: $('rewriteBtn'),
-  undoBtn: $('undoBtn'), stopBtn: $('stopBtn'), outlineBtn: $('outlineBtn'), summaryBtn: $('summaryBtn'),
+  undoBtn: $('undoBtn'), stopBtn: $('stopBtn'), outlineBtn: $('outlineBtn'), summaryBtn: $('summaryBtn'), plotBtn: $('plotBtn'),
   polishBtn: $('polishBtn'), checkBtn: $('checkBtn'), checkPanel: $('checkPanel'),
 };
 
@@ -500,7 +508,7 @@ function setStatus(msg, kind) {
    ・自分が触っていない項目は、別の端末で書き換えた内容に追従する
    ・自分が書き換えた項目は、自分の内容が保存される
    これで、古い画面の端末が新しい作品設定を上書きすることがなくなる。 */
-const WORK_FIELDS = ['title', 'style', 'sample', 'world', 'characters', 'outline', 'outlineRequest', 'summary',
+const WORK_FIELDS = ['title', 'style', 'sample', 'world', 'characters', 'plot', 'plotRequest', 'outline', 'outlineRequest', 'summary',
   'body', 'instruction', 'target', 'goal'];
 let synced = { rev: -1, works: {}, settings: {} }; // サーバーと一致していると分かっている値
 let deletedLocal = new Set();
@@ -751,7 +759,7 @@ function updateGoal() {
 }
 function updateButtons() {
   const busy = !!generating;
-  [els.sceneBtn, els.continueBtn, els.outlineBtn, els.summaryBtn, els.workSelect, $('newWorkBtn')]
+  [els.sceneBtn, els.continueBtn, els.outlineBtn, els.summaryBtn, els.plotBtn, els.workSelect, $('newWorkBtn')]
     .forEach((b) => { b.disabled = busy; });
   const top = undoStack[undoStack.length - 1];
   els.undoBtn.disabled = busy || !top || top.workId !== state.currentId;
@@ -1018,6 +1026,7 @@ function settingsBlock(w, opts = {}) {
     parts.push('## 文体のお手本（文の長さ・リズム・語彙・描写の密度・比喩の量など、書き方だけを真似る。内容・人物・固有名詞・出来事は使わない）\n' +
       '<お手本>\n' + w.sample.trim() + '\n</お手本>');
   }
+  if (!opts.noPlot) add('全体のあらすじ（物語の行き先。今回書く範囲より先の出来事は、まだ書かない）', w.plot);
   if (!opts.noOutline) add('構成案', w.outline);
   if (!opts.noSummary) add('これまでのあらすじ', w.summary);
   return parts.length ? '# 作品設定\n' + parts.join('\n\n') : '# 作品設定\n（特になし）';
@@ -1060,12 +1069,32 @@ function buildSceneMessages(w, kind, instruction, amount, bodyText) {
   u += '本文だけを出力してください。';
   return [{ role: 'system', content: s.systemPrompt || DEFAULT_SYSTEM }, { role: 'user', content: u }];
 }
+function goalNote(w) {
+  const g = Number(w.goal) || 0;
+  return g ? '作品全体の分量は約' + g + '字の予定。\n' : '';
+}
+function buildPlotMessages(w) {
+  const req = (w.plotRequest || '').trim();
+  const u = settingsBlock(w, { noOutline: true, noSample: true, noPlot: true }) + '\n\n# 今回の指示\n' +
+    '上の設定をもとに、この小説の「全体のあらすじ」（物語の始まりから結末まで）を作ってください。\n' +
+    (req ? '要望: ' + req + '\n' : '') + goalNote(w) +
+    ((w.summary || '').trim() ? 'すでに書いた部分（「これまでのあらすじ」）とは矛盾させず、その続きの展開と結末を考えること。\n' : '') +
+    '600〜1000字ほどの文章で、始まり・展開・山場・結末が分かるように書く。主要な出来事と、登場人物の関係や気持ちの変化を含める。\n' +
+    '登場人物の設定は変えないこと。小説の本文や、あらすじ以外の説明は書かないでください。';
+  return [
+    { role: 'system', content: 'あなたは日本語の小説家で、物語の筋立てを考えるのが得意です。指示されたものだけを出力します。' },
+    { role: 'user', content: u },
+  ];
+}
 function buildOutlineMessages(w) {
   const req = (w.outlineRequest || '').trim();
+  const hasPlot = !!(w.plot || '').trim();
   const u = settingsBlock(w, { noOutline: true, noSample: true }) + '\n\n# 今回の指示\n' +
-    '上の設定をもとに、この小説の構成案を作ってください。\n' +
-    (req ? '要望: ' + req + '\n' : '') +
-    '形式:\n【全体のあらすじ】3〜5行\n【場面構成】場面ごとに「場面1：（場所・登場人物）」と、起きること・見せ場を2〜3行ずつ\n' +
+    (hasPlot ? '上の「全体のあらすじ」に沿って、この小説を場面ごとに分けた構成案を作ってください。あらすじの流れや結末は変えないこと。\n'
+      : '上の設定をもとに、この小説の構成案を作ってください。\n') +
+    (req ? '要望: ' + req + '\n' : '') + goalNote(w) +
+    '形式:\n' + (hasPlot ? '' : '【全体のあらすじ】3〜5行\n') +
+    '【場面構成】場面ごとに「場面1：（場所・登場人物）」と、起きること・見せ場を2〜3行ずつ\n' +
     '登場人物の設定は変えないこと。本文は書かないでください。';
   return [
     { role: 'system', content: 'あなたは日本語の小説家で、物語の構成を考えるのが得意です。指示された形式だけを出力します。' },
@@ -1074,7 +1103,7 @@ function buildOutlineMessages(w) {
 }
 function buildSummaryMessages(w) {
   const tail = tailOf(w.body, 16000);
-  let u = settingsBlock(w, { noSummary: true, noOutline: true, noSample: true }) + '\n\n';
+  let u = settingsBlock(w, { noSummary: true, noOutline: true, noSample: true, noPlot: true }) + '\n\n'; // 予定の筋が要約に混ざらないように
   if (w.summary && w.summary.trim()) u += '# これまでのあらすじ（前回作成）\n' + w.summary.trim() + '\n\n';
   u += '# 本文' + (tail.cut ? '（後半部分）' : '') + '\n' + tail.text + '\n\n# 今回の指示\n' +
     '続きを書く作家のための「これまでのあらすじ」を作ってください。' +
@@ -1369,19 +1398,19 @@ async function runFieldGen(kind) {
   if (!checkReady()) return;
   await syncAndWait();
   const w = cur();
-  const field = kind === 'outline' ? 'outline' : 'summary';
+  const cfg = FIELD_GEN[kind];
+  const field = cfg.field;
   if (kind === 'summary' && !(w.body || '').trim()) { setStatus('まだ本文がありません。', 'err'); return; }
-  if ((w[field] || '').trim() && kind === 'outline' &&
-      !confirm('いまの構成案を新しい案で置き換えます（「取り消し」で戻せます）。よろしいですか？')) return;
-  const messages = kind === 'outline' ? buildOutlineMessages(w) : buildSummaryMessages(w);
-  const maxTokens = kind === 'outline' ? 2500 : 1500;
+  if ((w[field] || '').trim() && cfg.confirm && !confirm(cfg.confirm)) return;
+  const messages = cfg.build(w);
+  const maxTokens = cfg.max;
   if (!estimateOk(messages, maxTokens)) return;
   const tag = 'f' + Date.now();
   pushUndo(tag, field);
   lastAction = { kind, tag };
-  const el = $(kind === 'outline' ? 'f_outline' : 'f_summary');
+  const el = $(cfg.el);
   let out = '';
-  setStatus(kind === 'outline' ? '構成案を考えています…' : '本文を要約しています…');
+  setStatus(cfg.busy);
   const session = startSession();
   let error = null;
   try {
@@ -1395,8 +1424,18 @@ async function runFieldGen(kind) {
   updateButtons(); sync();
   if (error) setStatus(error.message, 'err');
   else if (session.stopped) setStatus('停止しました。');
-  else setStatus(kind === 'outline' ? '構成案を作りました。自由に手直ししてOKです。' : 'あらすじを更新しました。間違いがあれば直してください。', 'ok');
+  else setStatus(cfg.done, 'ok');
 }
+const FIELD_GEN = {
+  plot: { field: 'plot', el: 'f_plot', build: buildPlotMessages, max: 2000, busy: '全体のあらすじを考えています…',
+    confirm: 'いまの全体のあらすじを新しい案で置き換えます（「取り消し」で戻せます）。よろしいですか？',
+    done: '全体のあらすじを作りました。自由に手直ししてOKです。次は「構成案を作る」で場面に分けられます。' },
+  outline: { field: 'outline', el: 'f_outline', build: buildOutlineMessages, max: 2500, busy: '構成案を考えています…',
+    confirm: 'いまの構成案を新しい案で置き換えます（「取り消し」で戻せます）。よろしいですか？',
+    done: '構成案を作りました。自由に手直ししてOKです。' },
+  summary: { field: 'summary', el: 'f_summary', build: buildSummaryMessages, max: 1500, busy: '本文を要約しています…',
+    confirm: '', done: 'これまでのあらすじを更新しました。間違いがあれば直してください。' },
+};
 
 function undo() {
   const u = undoStack[undoStack.length - 1];
@@ -1719,6 +1758,7 @@ els.undoBtn.addEventListener('click', () => {
 });
 els.stopBtn.addEventListener('click', () => { if (generating) generating.abort(); });
 els.outlineBtn.addEventListener('click', () => runFieldGen('outline'));
+els.plotBtn.addEventListener('click', () => runFieldGen('plot'));
 els.summaryBtn.addEventListener('click', () => runFieldGen('summary'));
 document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !generating && !dlg.open) {

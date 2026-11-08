@@ -167,7 +167,7 @@ function loadData() { return readJsonFile(DATA_FILE, null); }
 function storedKey() { const d = loadData(); return (d && d.settings && d.settings.apiKey) || ''; }
 
 // 作品ごとに保存する項目（ここにない項目は保存しない）
-const WORK_FIELDS = ['title', 'style', 'sample', 'world', 'characters', 'outline', 'outlineRequest', 'summary',
+const WORK_FIELDS = ['title', 'style', 'sample', 'world', 'characters', 'plot', 'plotRequest', 'outline', 'outlineRequest', 'summary',
   'body', 'instruction', 'target', 'goal'];
 
 function normalized(d) {
