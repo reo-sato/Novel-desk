@@ -236,8 +236,9 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
     <div class="field">
       <label for="f_plot">全体のあらすじ <span class="hint">物語の始まりから結末まで</span></label>
       <textarea id="f_plot" data-field="plot" rows="8" placeholder="物語全体の流れ（始まり・山場・結末）。自分で書いても、下のボタンで作らせてもOK。モデルはこれを物語の行き先として、いま書く場面を書きます。"></textarea>
-      <div class="row">
-        <input id="f_plotReq" data-field="plotRequest" placeholder="あらすじへの要望（例：結末は二人が結ばれる）">
+      <label for="f_plotReq" style="margin-top:10px">あらすじへの要望 <span class="hint">「あらすじを作る」のときに使います</span></label>
+      <textarea id="f_plotReq" data-field="plotRequest" rows="5" placeholder="例：&#10;・前半は二人の対立、後半で少しずつ距離が縮まる&#10;・中盤で第三者が現れて関係が揺らぐ&#10;・結末は二人が結ばれる"></textarea>
+      <div class="row" style="justify-content:flex-end">
         <button id="plotBtn" class="small">あらすじを作る</button>
       </div>
     </div>
