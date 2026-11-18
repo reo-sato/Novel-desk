@@ -1,5 +1,5 @@
 {
-  "version": "1.1.1",
+  "version": "1.1.2",
   "repo": "reo-sato/Novel-desk",
   "branch": "main",
   "batVersion": "2",
@@ -9,5 +9,5 @@
     "README.txt",
     "version.json"
   ],
-  "notes": "「あらすじへの要望」欄を複数行の大きな入力欄にしました。"
+  "notes": "作品を選ぶ欄の横に「複製」ボタンを追加しました（モデルの書き比べなどに）。"
 }

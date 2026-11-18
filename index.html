@@ -186,6 +186,7 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
   <span class="brand">Novel Desk</span>
   <select id="workSelect" title="作品を切り替え"></select>
   <button id="newWorkBtn" title="新しい作品">＋<span class="label"> 新しい作品</span></button>
+  <button id="dupWorkBtn" title="選んでいる作品を複製して、コピーを開きます">複製</button>
   <span class="spacer"></span>
   <details class="menu" id="fileMenu">
     <summary title="書き出し・読み込み">☰<span class="label"> 書き出し・読み込み</span></summary>
@@ -760,7 +761,7 @@ function updateGoal() {
 }
 function updateButtons() {
   const busy = !!generating;
-  [els.sceneBtn, els.continueBtn, els.outlineBtn, els.summaryBtn, els.plotBtn, els.workSelect, $('newWorkBtn')]
+  [els.sceneBtn, els.continueBtn, els.outlineBtn, els.summaryBtn, els.plotBtn, els.workSelect, $('newWorkBtn'), $('dupWorkBtn')]
     .forEach((b) => { b.disabled = busy; });
   const top = undoStack[undoStack.length - 1];
   els.undoBtn.disabled = busy || !top || top.workId !== state.currentId;
@@ -841,14 +842,17 @@ $('newWorkBtn').addEventListener('click', () => {
   setTab('aside'); $('f_title').focus();
   setStatus('新しい作品を作りました。左の作品設定から埋めていきましょう。', 'ok');
 });
-$('duplicateWorkBtn').addEventListener('click', () => {
+function duplicateWork() {
+  if (generating) return;
   closeMenu();
   flushDom();
   const src = cur();
   const w = { ...src, id: newWork().id, title: (src.title || '無題') + '（コピー）', updatedAt: Date.now() };
   state.works.push(w); state.currentId = w.id; rememberCurrent(); renderAll(); scheduleSave();
-  setStatus('作品を複製しました。', 'ok');
-});
+  setStatus('「' + w.title + '」を作って開きました。元の作品はそのまま残っています。', 'ok');
+}
+$('duplicateWorkBtn').addEventListener('click', duplicateWork);
+$('dupWorkBtn').addEventListener('click', duplicateWork);
 $('deleteWorkBtn').addEventListener('click', () => {
   closeMenu();
   const w = cur();
