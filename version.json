@@ -1,5 +1,5 @@
 {
-  "version": "1.1.2",
+  "version": "1.2.0",
   "repo": "reo-sato/Novel-desk",
   "branch": "main",
   "batVersion": "2",
@@ -9,5 +9,5 @@
     "README.txt",
     "version.json"
   ],
-  "notes": "作品を選ぶ欄の横に「複製」ボタンを追加しました（モデルの書き比べなどに）。"
+  "notes": "「相談」タブを追加しました。作品設定を毎回渡して設定の壁打ちができ、気に入った提案はボタンで設定欄に書き足せます。"
 }

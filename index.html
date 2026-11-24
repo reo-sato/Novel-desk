@@ -70,7 +70,33 @@ details.menu .menu-body button:hover { background: var(--panel-2); }
 
 /* レイアウト */
 main { display: grid; grid-template-columns: 380px 1fr; flex: 1; min-height: 0; }
-.mobile-tabs { display: none; }
+.mobile-tabs { display: flex; background: var(--panel); border-bottom: 1px solid var(--line); padding-left: 380px; }
+.mobile-tabs button {
+  border: none; border-radius: 0; background: transparent; padding: 8px 18px; color: var(--muted);
+  border-bottom: 2px solid transparent;
+}
+.mobile-tabs button.on { color: var(--accent); border-bottom-color: var(--accent); }
+.mobile-tabs button[data-tab="aside"] { display: none; } /* PCでは作品設定は常に左に表示 */
+aside { grid-column: 1; grid-row: 1; }
+.editor, .consult { grid-column: 2; grid-row: 1; }
+body.tab-consult .editor { display: none; }
+body:not(.tab-consult) .consult { display: none; }
+.consult { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.consult-log { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+.msg { max-width: 52em; border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
+.msg.user { align-self: flex-end; background: var(--panel-2); max-width: 40em; }
+.msg.assistant { align-self: flex-start; background: var(--paper); }
+.msg-text { white-space: pre-wrap; line-height: 1.8; word-break: break-word; }
+.msg-tools { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+.msg-tools select { width: auto; padding: 4px 8px; font-size: 12px; }
+.consult-empty { color: var(--faint); margin: auto; text-align: center; line-height: 1.9; max-width: 34em; }
+.consult-undo { border-top: 1px solid var(--line); background: var(--panel); padding: 8px 20px; font-size: 13px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.consult-undo[hidden] { display: none; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+#consultInput { flex: 1; min-height: 64px; height: 64px; }
+.c-status { margin-top: 8px; font-size: 13px; color: var(--muted); min-height: 1.6em; }
+.c-status.err { color: var(--danger); }
+.c-status.ok { color: var(--ok); }
 aside { border-right: 1px solid var(--line); overflow-y: auto; padding: 14px 16px 40px; background: var(--panel); }
 .field { margin-bottom: 16px; }
 .field label { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-weight: 700; margin-bottom: 4px; }
@@ -156,15 +182,20 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
   header .spacer { display: none; }
   #newWorkBtn .label, #settingsBtn .label, details.menu .label { display: none; }
   details.menu > summary { padding: 7px 10px; }
-  .mobile-tabs { display: flex; border-bottom: 1px solid var(--line); background: var(--panel); }
+  .mobile-tabs { display: flex; border-bottom: 1px solid var(--line); background: var(--panel); padding-left: 0; }
+  .mobile-tabs button[data-tab="aside"] { display: block; }
+  aside, .editor, .consult { grid-column: auto; grid-row: auto; }
   .mobile-tabs button {
     flex: 1; border: none; border-radius: 0; background: transparent; padding: 10px; color: var(--muted);
     border-bottom: 2px solid transparent;
   }
   .mobile-tabs button.on { color: var(--accent); border-bottom-color: var(--accent); }
   main { grid-template-columns: 1fr; }
-  body.tab-editor aside { display: none; }
-  body.tab-aside .editor { display: none; }
+  body.tab-editor aside, body.tab-consult aside { display: none; }
+  body.tab-aside .editor, body.tab-aside .consult { display: none; }
+  .consult-log { padding: 12px; }
+  .consult .editor-head .note, .consult .editor-head .count { display: none; } /* スマホでは説明を省いて詰める */
+  .msg { max-width: 100%; }
   aside { border-right: none; }
   .editor-head { padding: 6px 14px; }
   .paper-wrap { padding: 0 6px; }
@@ -203,6 +234,7 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
 </header>
 <nav class="mobile-tabs">
   <button data-tab="editor" class="on">本文</button>
+  <button data-tab="consult">相談</button>
   <button data-tab="aside">作品設定</button>
 </nav>
 
@@ -304,6 +336,34 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
       <div id="status"></div>
     </div>
   </section>
+
+  <section class="consult" id="consultView">
+    <div class="editor-head">
+      <span class="count">相談</span>
+      <span class="note" style="margin:0">作品設定を毎回渡して、設定の壁打ちをします</span>
+      <span class="spacer"></span>
+      <label class="check" style="margin:0"><input type="checkbox" id="c_body" data-setting="consultIncludeBody"> 本文の最後も渡す</label>
+      <button class="small" id="consultReset">会話をリセット</button>
+    </div>
+    <div class="consult-log" id="consultLog"></div>
+    <div class="consult-undo" id="consultUndo" hidden></div>
+    <div class="composer">
+      <div class="chips">
+        <button class="small chip" data-q="今の作品設定を読んで、矛盾している点や、まだ決まっていない穴を指摘してください。重要なものから順に。">矛盾・穴の指摘</button>
+        <button class="small chip" data-q="全体のあらすじと構成案を踏まえて、次に書く話の展開案を3通り出してください。それぞれの見どころと、作品設定と矛盾しないかも添えてください。">次の話の展開案</button>
+        <button class="small chip" data-q="登場人物の中から、まだ描写が薄い人物を選び、性格・動機・関係性を掘り下げる案を出してください。決定済みの設定は変えないでください。">人物の掘り下げ</button>
+      </div>
+      <div class="composer-row">
+        <textarea id="consultInput" placeholder="相談したいこと（Ctrl+Enterで送信）"></textarea>
+      </div>
+      <div class="actions">
+        <button class="primary" id="consultSend">送信</button>
+        <span class="spacer"></span>
+        <button class="danger" id="consultStop" hidden>■ 停止</button>
+      </div>
+      <div id="consultStatus" class="c-status"></div>
+    </div>
+  </section>
 </main>
 
 <dialog id="settingsDlg">
@@ -363,6 +423,25 @@ dialog::backdrop { background: rgba(0,0,0,.55); }
       <label for="s_system">基本ルール（システム指示）
         <button class="small" id="resetSystem" type="button">初期値に戻す</button></label>
       <textarea id="s_system" data-setting="systemPrompt" rows="11"></textarea>
+    </div>
+    <div class="lan-box" id="consultBox">
+      <h3>相談タブの設定</h3>
+      <div class="grid2" style="margin-top:8px">
+        <div class="field">
+          <label for="s_cmodel">相談用のモデルID</label>
+          <input id="s_cmodel" data-setting="consultModel" list="modelList" placeholder="空欄なら執筆と同じモデル">
+        </div>
+        <div class="field">
+          <label for="s_ctemp">相談の temperature</label>
+          <input id="s_ctemp" data-setting="consultTemperature" type="number" step="0.05" min="0" max="2">
+          <div class="note">低めの方が話がぶれにくい。0.7目安</div>
+        </div>
+      </div>
+      <label class="check"><input type="checkbox" id="s_cthink" data-setting="consultThinking"> 相談では思考モードを使う（じっくり考えさせる。返事は遅くなる）</label>
+      <div class="field" style="margin-top:10px">
+        <label for="s_cprompt">相談役のルール <button class="small" id="resetConsult" type="button">初期値に戻す</button></label>
+        <textarea id="s_cprompt" data-setting="consultPrompt" rows="10"></textarea>
+      </div>
     </div>
     <div class="lan-box" id="lanBox">
       <h3>スマホから使う（同じWi-Fi）</h3>
@@ -453,6 +532,18 @@ const DEFAULT_RULES = [
   '- 抽象的な名詞より、具体的な名詞と動詞を使う',
 ].join('\n');
 
+const DEFAULT_CONSULT = [
+  'あなたは、ユーザーが書いている小説の設定を一緒に練る相談役です。成人向けの作品で、登場人物は全員成人です。',
+  '',
+  '守ること:',
+  '- 「作品設定」に書かれている内容は決定済みとして扱う。勝手に変えたり、世界観の根幹に関わる新しい決まりを付け足したりしない。変えた方がよいと思うときは「変更案」として理由と一緒に示し、決めるのはユーザーに任せる。',
+  '- アイデアは「案」として複数出し、それぞれの長所と、作品設定と矛盾しないかを添える。',
+  '- 矛盾や穴に気づいたら、遠慮せず指摘する。',
+  '- まず結論を短く述べ、そのあと理由を述べる。長くなりすぎないようにする。',
+  '- 小説の本文は、頼まれたときだけ書く。',
+  '- 「設定欄に貼れる形で」と頼まれたら、前置きや説明を付けず、その内容だけを書く。',
+].join('\n');
+
 const DEFAULT_SETTINGS = {
   apiKey: '',
   model: 'huihui-ai/Huihui-gemma-4-31B-it-abliterated-v2',
@@ -469,6 +560,11 @@ const DEFAULT_SETTINGS = {
   polishRules: DEFAULT_RULES,
   autoPolish: false,
   githubToken: '',
+  consultPrompt: DEFAULT_CONSULT,
+  consultModel: '',
+  consultTemperature: 0.7,
+  consultThinking: false,
+  consultIncludeBody: false,
 };
 
 function newWork(title) {
@@ -476,7 +572,7 @@ function newWork(title) {
     id: 'w' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     title: title || '',
     style: '', sample: '', world: '', characters: '', plot: '', plotRequest: '', outline: '', outlineRequest: '', summary: '', body: '',
-    instruction: '', target: 2000, goal: 0,
+    instruction: '', target: 2000, goal: 0, consultLog: '[]',
     updatedAt: Date.now(),
   };
 }
@@ -511,7 +607,7 @@ function setStatus(msg, kind) {
    ・自分が書き換えた項目は、自分の内容が保存される
    これで、古い画面の端末が新しい作品設定を上書きすることがなくなる。 */
 const WORK_FIELDS = ['title', 'style', 'sample', 'world', 'characters', 'plot', 'plotRequest', 'outline', 'outlineRequest', 'summary',
-  'body', 'instruction', 'target', 'goal'];
+  'body', 'instruction', 'target', 'goal', 'consultLog'];
 let synced = { rev: -1, works: {}, settings: {} }; // サーバーと一致していると分かっている値
 let deletedLocal = new Set();
 let syncing = false, syncAgain = false, leaving = false, syncFailed = false;
@@ -681,6 +777,7 @@ function applyFieldsToDom(fields) {
   updateCount(); updateGoal();
   if (fields.has('body')) updateCheck();
   if (fields.has('sample')) updateSampleCount();
+  if (fields.has('consultLog')) renderConsult();
 }
 
 async function load() {
@@ -733,7 +830,7 @@ function renderWork() {
   els.body.value = w.body || '';
   els.instruction.value = w.instruction || '';
   els.target.value = w.target || 2000;
-  updateGoal(); updateCheck(); updateSampleCount();
+  updateGoal(); updateCheck(); updateSampleCount(); renderConsult();
   els.body.scrollTop = els.body.scrollHeight;
 }
 function renderSettings() {
@@ -772,6 +869,10 @@ function updateButtons() {
     (lastAction.kind === 'polish' && (!below || below.tag !== sceneAct.tag));
   els.continueBtn.disabled = busy || !els.body.value.trim();
   els.polishBtn.disabled = busy || !els.body.value.trim();
+  $('consultSend').disabled = busy;
+  $('consultReset').disabled = busy;
+  $('consultStop').hidden = !busy;
+  $('consultInput').readOnly = busy;
   els.stopBtn.hidden = !busy;
   els.body.readOnly = busy;
   els.body.classList.toggle('streaming', busy);
@@ -1004,7 +1105,7 @@ $('setPwBtn').addEventListener('click', async () => {
 
 /* ---------- スマホのタブ切り替え ---------- */
 function setTab(t) {
-  document.body.classList.remove('tab-editor', 'tab-aside');
+  document.body.classList.remove('tab-editor', 'tab-aside', 'tab-consult');
   document.body.classList.add('tab-' + t);
   document.querySelectorAll('.mobile-tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
 }
@@ -1013,6 +1114,10 @@ setTab('editor');
 $('toggleKey').addEventListener('click', () => {
   const k = $('s_apiKey'); const show = k.type === 'password';
   k.type = show ? 'text' : 'password'; $('toggleKey').textContent = show ? '隠す' : '表示';
+});
+$('resetConsult').addEventListener('click', () => {
+  if (!confirm('相談役のルールを初期値に戻しますか？')) return;
+  state.settings.consultPrompt = DEFAULT_CONSULT; $('s_cprompt').value = DEFAULT_CONSULT; scheduleSave();
 });
 $('resetSystem').addEventListener('click', () => {
   if (!confirm('基本ルールを初期値に戻しますか？')) return;
@@ -1146,16 +1251,17 @@ function startSession() {
 }
 function endSession() { generating = null; updateButtons(); }
 
-async function streamChat(messages, maxTokens, minTokens, onText, onReasoning, session) {
+async function streamChat(messages, maxTokens, minTokens, onText, onReasoning, session, opts = {}) {
   const s = state.settings;
   const payload = {
-    model: (s.model || '').trim(), messages, stream: true,
-    temperature: Number(s.temperature), top_p: Number(s.top_p),
+    model: ((opts.model || s.model) || '').trim(), messages, stream: true,
+    temperature: Number(opts.temperature != null ? opts.temperature : s.temperature), top_p: Number(s.top_p),
     repetition_penalty: Number(s.repetition_penalty), max_tokens: Math.round(maxTokens),
   };
   if (minTokens) payload.min_tokens = Math.round(minTokens);
   if (Number(s.min_p) > 0) payload.min_p = Number(s.min_p);
-  if (s.disableThinking) payload.chat_template_kwargs = { enable_thinking: false };
+  if (opts.thinking === true) payload.chat_template_kwargs = { enable_thinking: true };
+  else if (opts.thinking === false || s.disableThinking) payload.chat_template_kwargs = { enable_thinking: false };
 
   const round = new AbortController();
   session.round = round;
@@ -1748,6 +1854,240 @@ $('polishRetry').addEventListener('click', async () => {
 });
 pdlg.addEventListener('cancel', (e) => { if (generating) { e.preventDefault(); } });
 
+/* ---------- 相談（設定の壁打ち） ----------
+   会話は作品ごとに保存し（consultLog）、PCとスマホで同期する。
+   毎回、今の作品設定をまとめてモデルに渡す。 */
+const CONSULT_KEEP_CHARS = 14000; // モデルに渡す会話の上限（32Kの枠に収めるため）
+const APPLY_FIELDS = [
+  ['characters', '登場人物'], ['world', '世界観・舞台'], ['plot', '全体のあらすじ'], ['outline', '構成案'],
+  ['style', '文体・書き方のルール'], ['summary', 'これまでのあらすじ'], ['plotRequest', 'あらすじへの要望'],
+  ['outlineRequest', '構成への要望'],
+];
+function getLog(w) {
+  try { const a = JSON.parse(w.consultLog || '[]'); return Array.isArray(a) ? a.filter((m) => m && m.content) : []; } catch (_) { return []; }
+}
+function setLog(w, log) {
+  w.consultLog = JSON.stringify(log); w.updatedAt = Date.now(); scheduleSave();
+}
+function cStatus(msg, kind) { const e = $('consultStatus'); e.textContent = msg || ''; e.className = 'c-status' + (kind ? ' ' + kind : ''); }
+// 思考部分が本文に混ざって返ってきた場合に取り除く
+function stripThink(t) { return t.replace(/<think>[\s\S]*?(<\/think>|$)/g, '').replace(/^\s+/, ''); }
+
+function buildConsultMessages(w, log) {
+  const s = state.settings;
+  let sys = ((s.consultPrompt || '').trim() || DEFAULT_CONSULT) + '\n\n' + settingsBlock(w, { noSample: true });
+  if (s.consultIncludeBody && (w.body || '').trim()) {
+    const t = tailOf(w.body, 3000);
+    sys += '\n\n# 本文の最後の部分' + (t.cut ? '（これより前は省略）' : '') + '\n' + t.text;
+  }
+  const keep = [];
+  let total = 0;
+  for (let i = log.length - 1; i >= 0; i--) {
+    total += log[i].content.length;
+    if (total > CONSULT_KEEP_CHARS && keep.length) break;
+    keep.unshift({ role: log[i].role, content: log[i].content });
+  }
+  while (keep.length && keep[0].role !== 'user') keep.shift();
+  return { messages: [{ role: 'system', content: sys }, ...keep], dropped: log.length - keep.length };
+}
+
+let consultSel = null; // 相談の返事の中で選択した文字列 { el, text, time }
+document.addEventListener('selectionchange', () => {
+  const sel = window.getSelection();
+  const text = sel ? String(sel) : '';
+  if (!text.trim() || !sel.anchorNode) return;
+  const node = sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement;
+  const el = node && node.closest && node.closest('.msg.assistant .msg-text');
+  if (el) consultSel = { el, text, time: Date.now() };
+});
+function pickText(el, whole) {
+  if (consultSel && consultSel.el === el && Date.now() - consultSel.time < 120000) return consultSel.text.trim();
+  return whole.trim();
+}
+function copyText(text) {
+  // スマホ（http）では navigator.clipboard が使えないので、古い方法も用意する
+  if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); } finally { ta.remove(); }
+  return Promise.resolve();
+}
+
+function renderConsult() {
+  const w = cur(); if (!w) return;
+  const box = $('consultLog');
+  const log = getLog(w);
+  box.innerHTML = '';
+  if (!log.length) {
+    const e = document.createElement('div');
+    e.className = 'consult-empty';
+    e.textContent = 'この作品の設定（世界観・登場人物・あらすじ・構成案など）を毎回渡して相談できます。\n下のボタンか入力欄から、聞きたいことを送ってください。\n気に入った返事は「設定欄に書き足す」で各欄に追加できます。';
+    e.style.whiteSpace = 'pre-wrap';
+    box.appendChild(e);
+    return;
+  }
+  log.forEach((m, i) => {
+    const d = document.createElement('div');
+    d.className = 'msg ' + (m.role === 'user' ? 'user' : 'assistant');
+    const t = document.createElement('div');
+    t.className = 'msg-text';
+    t.textContent = m.content;
+    d.appendChild(t);
+    if (m.role !== 'user') {
+      const tools = document.createElement('div');
+      tools.className = 'msg-tools';
+      const copy = document.createElement('button');
+      copy.className = 'small'; copy.textContent = 'コピー';
+      copy.addEventListener('click', () => copyText(pickText(t, m.content)).then(() => cStatus('コピーしました。', 'ok')));
+      tools.appendChild(copy);
+      const sel = document.createElement('select');
+      sel.innerHTML = '<option value="">設定欄に書き足す…</option>' + APPLY_FIELDS.map(([f, n]) => '<option value="' + f + '">' + n + '</option>').join('');
+      sel.addEventListener('change', () => { if (sel.value) applyToField(sel.value, pickText(t, m.content)); sel.value = ''; });
+      tools.appendChild(sel);
+      if (i === log.length - 1) {
+        const again = document.createElement('button');
+        again.className = 'small'; again.textContent = 'もう一度';
+        again.title = 'この返事を消して、同じ質問にもう一度答えさせます';
+        again.addEventListener('click', regenerateConsult);
+        tools.appendChild(again);
+      }
+      d.appendChild(tools);
+    }
+    box.appendChild(d);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+function showConsultUndo(name, tag) {
+  const bar = $('consultUndo');
+  bar.innerHTML = '';
+  const msg = document.createElement('span');
+  msg.textContent = '「' + name + '」の末尾に書き足しました。';
+  const back = document.createElement('button');
+  back.className = 'small'; back.textContent = '元に戻す';
+  back.addEventListener('click', () => {
+    const top = undoStack[undoStack.length - 1];
+    if (top && top.tag === tag && undo()) { lastAction = null; updateButtons(); cStatus('書き足す前に戻しました。'); }
+    bar.hidden = true;
+  });
+  const see = document.createElement('button');
+  see.className = 'small'; see.textContent = '作品設定で確認';
+  see.addEventListener('click', () => {
+    bar.hidden = true;
+    const el = document.querySelector('[data-field="' + tag.split(':')[1] + '"]');
+    setTab('aside');
+    if (el) { el.scrollIntoView({ block: 'center' }); el.focus({ preventScroll: true }); el.scrollTop = el.scrollHeight; }
+  });
+  bar.append(msg, back, see);
+  bar.hidden = false;
+}
+
+function applyToField(field, text) {
+  if (generating || !text) return;
+  const w = cur();
+  const name = (APPLY_FIELDS.find(([f]) => f === field) || [field, field])[1];
+  const tag = 'c' + Date.now() + ':' + field;
+  pushUndo(tag, field);
+  lastAction = { kind: 'consultApply', tag };
+  const before = (w[field] || '').replace(/\s+$/, '');
+  w[field] = before ? before + '\n\n' + text : text;
+  w.updatedAt = Date.now();
+  applyFieldsToDom(new Set([field]));
+  updateButtons(); scheduleSave();
+  showConsultUndo(name, tag);
+  cStatus('');
+}
+
+async function sendConsult() {
+  if (generating) return;
+  const text = $('consultInput').value.trim();
+  if (!text) return;
+  flushDom();
+  if (!hasKey()) { cStatus('APIキーが未設定です。右上の「⚙ 接続設定」から入れてください。', 'err'); return; }
+  if (!((state.settings.consultModel || state.settings.model) || '').trim()) { cStatus('モデルIDが未設定です。', 'err'); return; }
+  $('consultSend').disabled = true;
+  await syncAndWait();
+  const w = cur();
+  const log = getLog(w);
+  log.push({ role: 'user', content: text });
+  setLog(w, log);
+  $('consultInput').value = '';
+  $('consultUndo').hidden = true;
+  renderConsult();
+  await runConsult(w);
+}
+
+async function regenerateConsult() {
+  if (generating) return;
+  const w = cur();
+  const log = getLog(w);
+  if (!log.length || log[log.length - 1].role === 'user') return;
+  log.pop();
+  setLog(w, log);
+  renderConsult();
+  await runConsult(w);
+}
+
+async function runConsult(w) {
+  const s = state.settings;
+  const log = getLog(w);
+  const { messages, dropped } = buildConsultMessages(w, log);
+  const box = $('consultLog');
+  const d = document.createElement('div');
+  d.className = 'msg assistant';
+  const t = document.createElement('div');
+  t.className = 'msg-text';
+  t.textContent = '考えています…';
+  d.appendChild(t); box.appendChild(d); box.scrollTop = box.scrollHeight;
+  cStatus(dropped ? '古い会話（' + dropped + '件）はモデルに渡していません。' : '');
+  const session = startSession();
+  let out = '', error = null, raf = 0;
+  try {
+    await streamChat(messages, 2000, 0, (chunk) => {
+      out += chunk;
+      const loopAt = findLoop(out);
+      if (loopAt >= 0) { out = out.slice(0, loopAt); session.round && session.round.abort(); return; }
+      if (!raf) raf = requestAnimationFrame(() => {
+        raf = 0;
+        const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+        t.textContent = stripThink(out) || '考えています…';
+        if (atBottom) box.scrollTop = box.scrollHeight;
+      });
+    }, () => { t.textContent = '考えています…'; }, session, {
+      model: (s.consultModel || '').trim() || undefined,
+      temperature: s.consultTemperature != null && s.consultTemperature !== '' ? Number(s.consultTemperature) : 0.7,
+      thinking: !!s.consultThinking,
+    });
+  } catch (e) {
+    if (e.name !== 'AbortError') error = e;
+  } finally {
+    endSession();
+  }
+  if (raf) cancelAnimationFrame(raf);
+  out = stripThink(out).trim();
+  if (out && state.works.includes(w)) { const l = getLog(w); l.push({ role: 'assistant', content: out }); setLog(w, l); }
+  renderConsult();
+  if (error) cStatus(error.message + (out ? '（途中までの返事は残しています）' : ''), 'err');
+  else if (session.stopped) cStatus('停止しました。');
+  else if (!out) cStatus('返事が空でした。「送信」か、モデルを変えて試してください。', 'err');
+  else cStatus(dropped ? '古い会話（' + dropped + '件）はモデルに渡していません。話題を変えるときは「会話をリセット」がおすすめです。' : '');
+}
+
+$('consultSend').addEventListener('click', sendConsult);
+$('consultStop').addEventListener('click', () => { if (generating) generating.abort(); });
+$('consultReset').addEventListener('click', () => {
+  if (generating) return;
+  const w = cur();
+  if (!getLog(w).length) return;
+  if (!confirm('この作品の相談の会話をすべて消します。よろしいですか？（作品設定は消えません）')) return;
+  setLog(w, []); renderConsult(); $('consultUndo').hidden = true; cStatus('会話をリセットしました。');
+});
+document.querySelectorAll('.chip').forEach((b) => b.addEventListener('click', () => {
+  const inp = $('consultInput');
+  inp.value = b.dataset.q; inp.focus();
+}));
+
 /* ---------- ボタン ---------- */
 function readTarget() { return Math.max(300, Math.min(8000, Number(els.target.value) || 2000)); }
 els.sceneBtn.addEventListener('click', () => runScene('scene', els.instruction.value, readTarget()));
@@ -1767,7 +2107,9 @@ els.plotBtn.addEventListener('click', () => runFieldGen('plot'));
 els.summaryBtn.addEventListener('click', () => runFieldGen('summary'));
 document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !generating && !dlg.open) {
-    e.preventDefault(); els.sceneBtn.click();
+    e.preventDefault();
+    if (document.body.classList.contains('tab-consult') || document.activeElement === $('consultInput')) $('consultSend').click();
+    else els.sceneBtn.click();
   }
 });
 document.addEventListener('click', (e) => {

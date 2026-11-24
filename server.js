@@ -168,7 +168,7 @@ function storedKey() { const d = loadData(); return (d && d.settings && d.settin
 
 // 作品ごとに保存する項目（ここにない項目は保存しない）
 const WORK_FIELDS = ['title', 'style', 'sample', 'world', 'characters', 'plot', 'plotRequest', 'outline', 'outlineRequest', 'summary',
-  'body', 'instruction', 'target', 'goal'];
+  'body', 'instruction', 'target', 'goal', 'consultLog'];
 
 function normalized(d) {
   d = d || {};
